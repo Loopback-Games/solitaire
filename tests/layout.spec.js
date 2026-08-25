@@ -1,0 +1,135 @@
+import { test, expect } from '@playwright/test';
+
+const DEAL = '/?deal=7';
+
+test('the board fits the viewport without scrolling', async ({ page }) => {
+  await page.goto(DEAL);
+  await page.waitForTimeout(800);
+
+  const fit = await page.evaluate(() => ({
+    overflowX: document.documentElement.scrollWidth - window.innerWidth,
+    overflowY: document.documentElement.scrollHeight - window.innerHeight,
+  }));
+  expect(fit.overflowX, 'nothing spills off the side').toBeLessThanOrEqual(0);
+  expect(fit.overflowY, 'nothing spills off the bottom').toBeLessThanOrEqual(0);
+
+  // Every pile sits inside the visible board.
+  const stray = await page.evaluate(() => {
+    const bad = [];
+    document.querySelectorAll('[data-pile]').forEach((p) => {
+      const r = p.getBoundingClientRect();
+      if (r.left < -1 || r.right > window.innerWidth + 1) bad.push(p.dataset.pile);
+    });
+    return bad;
+  });
+  expect(stray).toEqual([]);
+});
+
+test('the longest possible column still clears the controls', async ({ page }) => {
+  await page.goto(DEAL);
+
+  // The worst column Klondike can build is six face-down cards under a full
+  // king-to-ace run: 6 x 0.42 + 13 = 15.52 units. Probe past that, at 19.
+  const room = await page.evaluate(() => {
+    const t = document.querySelector('[data-pile="t0"]');
+    t.style.setProperty('--n', 19);
+    const probe = document.createElement('div');
+    probe.style.height = getComputedStyle(t).getPropertyValue('--fan');
+    t.appendChild(probe);
+    const fan = probe.getBoundingClientRect().height;
+    probe.remove();
+    t.style.removeProperty('--n');
+
+    const card = document.querySelector('.pile-tableau .card').getBoundingClientRect().height;
+    return {
+      fan,
+      worst: t.getBoundingClientRect().top + 18 * fan + card,
+      rail: document.querySelector('.rail-bottom').getBoundingClientRect().top,
+    };
+  });
+
+  expect(room.fan, 'the fan never collapses to nothing').toBeGreaterThan(3);
+  expect(room.worst, 'a nineteen-unit column stays above the controls').toBeLessThanOrEqual(room.rail);
+});
+
+test('cards carry names and face-down cards stay out of the tab order', async ({ page }) => {
+  await page.goto(DEAL);
+
+  await expect(page.locator('[data-pile="t6"] .card').last()).toHaveAttribute('aria-label', '2 of spades');
+  await expect(page.locator('[data-pile="t6"] .card').first()).toHaveAttribute('aria-label', 'Face-down card');
+
+  const reachable = await page.evaluate(() =>
+    [...document.querySelectorAll('.card')].filter((c) => c.tabIndex === 0).length);
+  // Only the seven exposed cards can be picked up on the opening deal.
+  expect(reachable).toBe(7);
+
+  const buried = await page.evaluate(() =>
+    [...document.querySelectorAll('.card:not(.is-up)')].every((c) => c.tabIndex === -1));
+  expect(buried, 'no face-down card is focusable').toBe(true);
+});
+
+test('a card can be moved with the keyboard alone', async ({ page }) => {
+  await page.goto(DEAL);
+
+  const two = page.locator('[data-pile="t6"] .card').last();
+  await two.focus();
+  await page.keyboard.press('Enter');
+  await expect(two).toHaveClass(/is-picked/);
+
+  const target = page.locator('[data-pile="t5"]');
+  await expect(target).toHaveAttribute('role', 'button');
+  await target.focus();
+  await page.keyboard.press('Enter');
+
+  await expect(page.locator('[data-pile="t5"] .card')).toHaveCount(7);
+  await expect(page.locator('#stat-moves')).toHaveText('1');
+
+  // Escape drops a selection.
+  await page.locator('[data-pile="t5"] .card').last().click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.card.is-picked')).toHaveCount(0);
+});
+
+test('the live region reports what happened', async ({ page }) => {
+  await page.goto(DEAL);
+  await page.locator('[data-pile="t6"] .card').last().click();
+  await expect(page.locator('#announce')).toHaveText('2 of spades selected.');
+  await page.click('[data-pile="t5"]');
+  await expect(page.locator('#announce')).toHaveText('2 of spades moved.');
+});
+
+test('the skip link reaches the board', async ({ page }) => {
+  await page.goto(DEAL);
+  await page.keyboard.press('Tab');
+  await expect(page.locator('.skip')).toBeFocused();
+  await expect(page.locator('.skip')).toBeInViewport();
+});
+
+test('reduced motion turns the animation off', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(DEAL);
+  const duration = await page.evaluate(() =>
+    getComputedStyle(document.querySelector('.card')).transitionDuration);
+  expect(parseFloat(duration)).toBeLessThan(0.01);
+});
+
+test('every card face renders a rank and a suit', async ({ page }) => {
+  await page.goto(DEAL);
+  const faces = await page.evaluate(() =>
+    [...document.querySelectorAll('.card')].map((c) => ({
+      id: +c.dataset.id,
+      idx: c.querySelector('.idx').textContent.trim(),
+      art: c.querySelector('.art').textContent.trim(),
+      colour: c.dataset.color,
+    })));
+
+  expect(faces).toHaveLength(52);
+  const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  for (const f of faces) {
+    const rank = ranks[f.id % 13];
+    const suit = ['♠', '♥', '♦', '♣'][(f.id / 13) | 0];
+    expect(f.idx, `card ${f.id} indexes as ${rank}${suit}`).toBe(`${rank}${suit}︎`);
+    expect(f.art, `card ${f.id} has centre art`).not.toBe('');
+    expect(f.colour).toBe((f.id / 13 | 0) === 1 || (f.id / 13 | 0) === 2 ? 'r' : 'b');
+  }
+});

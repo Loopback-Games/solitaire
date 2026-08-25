@@ -1,0 +1,14 @@
+{
+  "name": "loopback-solitaire",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Klondike solitaire for the browser. Static HTML and CSS with a small vanilla game loop.",
+  "license": "MIT",
+  "scripts": {
+    "serve": "python3 -m http.server 8080",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.0"
+  }
+}
