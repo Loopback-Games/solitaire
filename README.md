@@ -61,8 +61,13 @@ build up by suit from the ace, empty columns take a king. Draw one or draw three
 with unlimited redeals. Undo goes back 200 moves.
 
 Cards carry the traditional pip layouts, so a seven reads as a seven at a
-glance, and the court cards are two-way — the same figure upright at the top and
-inverted at the bottom, the way a real deck prints them.
+glance. Below roughly 680px the pips would be smaller than a grain of rice, so
+a card that size drops them for a large index and a single suit mark instead —
+legibility beats fidelity on a phone.
+
+Nothing large enough to look broken is ever allowed to sit where the card above
+it would slice it: card art starts below the deepest fan, so a fanned column
+shows clean indices all the way down.
 
 ## Developing
 

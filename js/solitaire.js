@@ -73,17 +73,18 @@
     node.dataset.id = id;
     node.dataset.color = isRed(id) ? 'r' : 'b';
 
-    // Three kinds of face: an ace, a pipped number, or a two-way court card.
-    // Where each pip lands is a stylesheet decision, not this file's.
+    // Three kinds of face: an ace, a court card, or a pipped number. Numbers
+    // carry both a pip layout and a large rank; the stylesheet picks whichever
+    // suits the card's size, because pips turn to mush on a phone.
     let art;
     if (rank === 1) {
       art = `<span class="art-ace">${SUITS[suit]}</span>`;
     } else if (rank > 10) {
-      const half = `<span class="court-half"><b>${COURT[rank]}</b><i>${SUITS[suit]}</i></span>`;
-      art = `<span class="art-court">${half}${half}</span>`;
+      art = `<span class="art-court"><b>${COURT[rank]}</b><i>${SUITS[suit]}</i></span>`;
     } else {
       art = `<span class="art-pips" data-rank="${rank}">` +
-            `<span>${SUITS[suit]}</span>`.repeat(rank) + `</span>`;
+            `<span>${SUITS[suit]}</span>`.repeat(rank) + `</span>` +
+            `<span class="art-big"><b>${RANKS[rank]}</b><i>${SUITS[suit]}</i></span>`;
     }
 
     const index = `<span class="idx"><span class="rank">${RANKS[rank]}</span>` +
