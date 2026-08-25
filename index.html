@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Solitaire — Loopback Games</title>
+<meta name="description" content="Klondike solitaire you can play in any browser. No install, no account, no ads. Built by Loopback Games.">
+<meta name="theme-color" content="#2A2036">
+<meta name="color-scheme" content="dark">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Solitaire — Loopback Games">
+<meta property="og:description" content="Klondike solitaire you can play in any browser. No install, no account, no ads.">
+<meta property="og:image" content="assets/social.svg">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/favicon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/solitaire.css">
+</head>
+<body>
+
+<a class="skip" href="#board">Skip to the board</a>
+
+<header class="rail rail-top">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <span class="brand-name">
+      <span class="brand-studio">Loopback Games</span>
+      <span class="brand-title">Solitaire</span>
+    </span>
+  </div>
+
+  <dl class="stats">
+    <div class="stat">
+      <dt>Time</dt>
+      <dd id="stat-time">0:00</dd>
+    </div>
+    <div class="stat">
+      <dt>Moves</dt>
+      <dd id="stat-moves">0</dd>
+    </div>
+    <div class="stat stat-wins">
+      <dt>Won</dt>
+      <dd id="stat-wins">0</dd>
+    </div>
+  </dl>
+</header>
+
+<main class="table">
+  <div class="board" id="board">
+
+    <section class="row row-top" aria-label="Stock and foundations">
+      <div class="stock-wrap">
+        <div class="pile pile-stock" id="stock" data-pile="stock" aria-label="Stock"></div>
+        <span class="stock-count" id="stock-count">24</span>
+      </div>
+
+      <div class="pile pile-waste" id="waste" data-pile="waste"></div>
+
+      <div class="row-spacer" aria-hidden="true"></div>
+
+      <div class="pile pile-foundation" data-pile="f0" data-suit="s" aria-label="Spades foundation"></div>
+      <div class="pile pile-foundation" data-pile="f1" data-suit="h" aria-label="Hearts foundation"></div>
+      <div class="pile pile-foundation" data-pile="f2" data-suit="d" aria-label="Diamonds foundation"></div>
+      <div class="pile pile-foundation" data-pile="f3" data-suit="c" aria-label="Clubs foundation"></div>
+    </section>
+
+    <section class="row row-tableau" aria-label="Tableau">
+      <div class="pile pile-tableau" data-pile="t0"></div>
+      <div class="pile pile-tableau" data-pile="t1"></div>
+      <div class="pile pile-tableau" data-pile="t2"></div>
+      <div class="pile pile-tableau" data-pile="t3"></div>
+      <div class="pile pile-tableau" data-pile="t4"></div>
+      <div class="pile pile-tableau" data-pile="t5"></div>
+      <div class="pile pile-tableau" data-pile="t6"></div>
+    </section>
+
+  </div>
+</main>
+
+<footer class="rail rail-bottom">
+  <button type="button" class="ctl" id="btn-new">New deal</button>
+  <button type="button" class="ctl" id="btn-undo" disabled>Undo</button>
+  <button type="button" class="ctl" id="btn-draw" aria-pressed="false">Draw <span id="draw-n">1</span></button>
+  <button type="button" class="ctl ctl-go" id="btn-auto" hidden>Finish it</button>
+</footer>
+
+<p class="sr-only" role="status" aria-live="polite" id="announce"></p>
+
+<div class="curtain" id="curtain" hidden>
+  <div class="won" role="dialog" aria-modal="true" aria-labelledby="won-title">
+    <span class="won-mark" aria-hidden="true"></span>
+    <h2 id="won-title">All fifty-two home.</h2>
+    <dl class="won-stats">
+      <div><dt>Time</dt><dd id="won-time">0:00</dd></div>
+      <div><dt>Moves</dt><dd id="won-moves">0</dd></div>
+      <div><dt>Best</dt><dd id="won-best">—</dd></div>
+    </dl>
+    <button type="button" class="ctl ctl-go" id="btn-again">Deal again</button>
+  </div>
+</div>
+
+<script src="js/solitaire.js" defer></script>
+</body>
+</html>

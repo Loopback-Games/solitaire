@@ -1,0 +1,14 @@
+{
+  "name": "Solitaire — Loopback Games",
+  "short_name": "Solitaire",
+  "description": "Klondike solitaire you can play in any browser.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#2A2036",
+  "theme_color": "#2A2036",
+  "icons": [
+    { "src": "assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

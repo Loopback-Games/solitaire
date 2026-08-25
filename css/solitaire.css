@@ -1,0 +1,801 @@
+/* ==========================================================================
+   Solitaire — Loopback Games
+   The table is aubergine, not felt green; the studio is named for a signal
+   that leaves and comes home, so mint and ochre carry the interaction.
+   ========================================================================== */
+
+:root {
+  /* Surface */
+  --plum:        #2A2036;
+  --plum-lit:    #3A2C4A;
+  --plum-deep:   #1E1728;
+  --rail:        #191320;
+
+  /* Card */
+  --paper:       #F7F2E7;
+  --paper-edge:  #DCD3C0;
+  --ink:         #241C2E;
+  --rouge:       #CF4436;
+
+  /* Signal */
+  --mint:        #63D9C4;
+  --mint-dim:    #3E9C8C;
+  --ochre:       #E9A845;
+
+  /* Text on the table */
+  --on-dark:     #EDE6F2;
+  --on-dark-mute:#A395B0;
+
+  --ease:        cubic-bezier(.2, .8, .3, 1);
+
+  /* Geometry — every length in the game derives from these three. */
+  --pad:  clamp(6px, 1.6vw, 20px);
+  --gap:  clamp(4px, 1vw, 13px);
+  --rail-h: clamp(46px, 8dvh, 62px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --cap: 148px;
+
+  /* Everything between the two rails. */
+  --content-h: calc(100dvh - 2 * var(--rail-h) - 2 * var(--pad)
+                    - var(--gap) - var(--safe-b));
+
+  /* Seven columns have to fit across, and a card plus a fanned pile has to fit
+     down. Whichever runs out first sets the card size. */
+  --card-w: min(
+    calc((100dvw - 2 * var(--pad) - 6 * var(--gap)) / 7),
+    calc(var(--content-h) / 5),
+    var(--cap)
+  );
+  --card-h: calc(var(--card-w) * 1.42);
+  --radius: clamp(4px, calc(var(--card-w) * .07), 9px);
+
+  /* Vertical room the tableau gets to fan into. */
+  --pile-h: calc(var(--content-h) - var(--card-h) - var(--gap));
+  /* On a tall phone there is height going spare, so the fan opens up: the
+     pile fills the table and each card gets a thumb-sized strip to tap. */
+  --fan-max: clamp(
+    calc(var(--card-h) * .22),
+    calc(var(--pile-h) / 9),
+    calc(var(--card-h) * .5)
+  );
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(120% 78% at 50% 34%, var(--plum-lit) 0%, var(--plum) 46%, var(--plum-deep) 100%);
+  color: var(--on-dark);
+  font-family: "Familjen Grotesk", ui-sans-serif, system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+.skip {
+  position: absolute; left: 50%; top: 0; z-index: 60;
+  transform: translate(-50%, -120%);
+  padding: .5rem 1rem; border-radius: 0 0 8px 8px;
+  background: var(--mint); color: var(--plum-deep);
+  font-weight: 600; text-decoration: none;
+}
+.skip:focus-visible { transform: translate(-50%, 0); }
+
+/* ---------------------------------------------------------------- rails -- */
+
+.rail {
+  position: relative;
+  z-index: 46;          /* falling cards tuck under the bars, not over them */
+  flex: 0 0 auto;
+  height: var(--rail-h);
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  padding-inline: max(var(--pad), 10px);
+  background: linear-gradient(var(--rail), color-mix(in srgb, var(--rail) 88%, var(--plum)));
+  border-block: 1px solid #ffffff14;
+}
+
+.rail-top { justify-content: space-between; }
+
+.rail-bottom {
+  height: calc(var(--rail-h) + var(--safe-b));
+  padding-bottom: var(--safe-b);
+  justify-content: center;
+  gap: clamp(6px, 1.6vw, 14px);
+}
+
+/* The studio mark: an outer ring closed, an inner ring broken — a signal
+   that goes out and returns. Same figure as the card back. */
+.brand { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+
+.mark {
+  position: relative;
+  width: 1.55rem; height: 1.55rem;
+  flex: 0 0 auto;
+  border: 2px solid var(--mint);
+  border-radius: 7px;
+}
+.mark::before {
+  content: ""; position: absolute; inset: 3px;
+  border: 2px solid var(--ochre);
+  border-top-color: transparent;
+  border-radius: 3px;
+}
+
+.brand-name { display: flex; flex-direction: column; line-height: 1.05; min-width: 0; }
+
+.brand-studio {
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: clamp(.52rem, 1.5vw, .62rem);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--mint-dim);
+  white-space: nowrap;
+}
+
+.brand-title {
+  font-size: clamp(1rem, 3.4vw, 1.35rem);
+  font-weight: 700;
+  letter-spacing: -.015em;
+}
+
+.stats { display: flex; gap: clamp(10px, 3vw, 26px); margin: 0; }
+.stat { text-align: right; }
+
+.stats dt {
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: clamp(.5rem, 1.4vw, .6rem);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--on-dark-mute);
+}
+
+.stats dd {
+  margin: 0;
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: clamp(.85rem, 2.6vw, 1.05rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--on-dark);
+}
+
+@media (max-width: 400px) { .stat-wins { display: none; } }
+
+/* ------------------------------------------------------------- controls -- */
+
+.ctl {
+  appearance: none;
+  font: inherit;
+  font-size: clamp(.78rem, 2.5vw, .92rem);
+  font-weight: 600;
+  color: var(--on-dark);
+  background: #ffffff0f;
+  border: 1px solid #ffffff1f;
+  border-radius: 999px;
+  padding: .5em clamp(.7em, 2.6vw, 1.25em);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .18s var(--ease), border-color .18s var(--ease),
+              color .18s var(--ease), transform .12s var(--ease);
+}
+@media (pointer: coarse) {
+  .ctl { min-height: 44px; padding-inline: clamp(.9em, 3.4vw, 1.4em); }
+}
+.ctl:hover:not(:disabled) { background: #ffffff1c; border-color: #ffffff33; }
+.ctl:active:not(:disabled) { transform: translateY(1px); }
+.ctl:disabled { opacity: .34; cursor: default; }
+
+.ctl-go {
+  background: var(--mint);
+  border-color: var(--mint);
+  color: var(--plum-deep);
+}
+.ctl-go:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--mint) 84%, white);
+  border-color: color-mix(in srgb, var(--mint) 84%, white);
+}
+
+#btn-draw[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--ochre) 22%, transparent);
+  border-color: color-mix(in srgb, var(--ochre) 60%, transparent);
+  color: var(--ochre);
+}
+
+:where(a, button, .card):focus-visible {
+  outline: 2px solid var(--mint);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- board -- */
+
+.table {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  padding: var(--pad);
+}
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(7, var(--card-w));
+  gap: var(--gap);
+}
+
+.row-tableau {
+  flex: 1 1 auto;
+  min-height: 0;
+  align-items: stretch;
+}
+
+/* ----------------------------------------------------------------- pile -- */
+
+.pile {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: var(--radius);
+  --fan: 0px;
+}
+
+/* Empty slot: a recessed outline on the table, not a card. */
+.pile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1.5px solid #ffffff1a;
+  background: #00000026;
+  box-shadow: inset 0 1px 0 #ffffff0d;
+  transition: border-color .18s var(--ease), background .18s var(--ease);
+}
+
+/* Once a card covers the slot, the slot stops tinting its edges. */
+.pile:has(.card)::before { background: transparent; border-color: transparent; }
+
+.pile-tableau {
+  height: 100%;
+  min-height: var(--card-h);
+  /* Spread the pile over the room it has, but never past the readable maximum.
+     The floor stops a long column collapsing to nothing; it is set low enough
+     that even the worst column Klondike can produce still clears the controls. */
+  --fan: min(
+    var(--fan-max),
+    max(
+      calc((var(--pile-h) - var(--card-h)) / max(var(--n), 1)),
+      calc(var(--card-h) * .07)
+    )
+  );
+}
+.pile-tableau::before { height: var(--card-h); bottom: auto; }
+
+/* Foundation slots carry a watermark of the suit they want. */
+.pile-foundation::after {
+  content: attr(data-glyph);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--card-w) * .42);
+  color: #ffffff1c;
+  pointer-events: none;
+}
+.pile-foundation[data-suit="s"]::after { content: "\2660\FE0E"; }
+.pile-foundation[data-suit="h"]::after { content: "\2665\FE0E"; }
+.pile-foundation[data-suit="d"]::after { content: "\2666\FE0E"; }
+.pile-foundation[data-suit="c"]::after { content: "\2663\FE0E"; }
+.pile-foundation:has(.card)::after { opacity: 0; }
+
+/* Mint means "this is in your hand". Ochre means "it can land here" — on the
+   pile outline when the column is empty, on the top card when it is not. */
+.pile.is-target::before {
+  border-color: var(--ochre);
+  background: color-mix(in srgb, var(--ochre) 14%, transparent);
+}
+.pile.is-target > .card:last-of-type > .face,
+.pile.is-target > .card:last-of-type > .back {
+  box-shadow: 0 0 0 2px var(--ochre), 0 6px 14px -8px #0009;
+}
+
+.pile-stock { cursor: pointer; }
+
+/* The stock's empty slot repeats the loop mark; it turns mint when there is
+   a waste pile to fold back in. */
+.stock-wrap { position: relative; width: var(--card-w); }
+
+.pile-stock::after {
+  content: "";
+  position: absolute;
+  inset: 34%;
+  border: 2px solid #ffffff26;
+  border-radius: 5px;
+  pointer-events: none;
+  transition: opacity .2s var(--ease), border-color .2s var(--ease);
+}
+.pile-stock:has(.card)::after { opacity: 0; }
+.pile-stock.can-recycle::after { border-color: var(--mint); }
+
+.stock-count {
+  position: absolute;
+  right: calc(var(--card-w) * .05);
+  bottom: calc(var(--card-w) * .05);
+  z-index: 5;
+  padding: .08em .45em;
+  border-radius: 999px;
+  background: #00000073;
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: clamp(.5rem, calc(var(--card-w) * .15), .72rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--mint);
+  pointer-events: none;
+}
+.stock-count[hidden] { display: none; }
+
+/* ----------------------------------------------------------------- card -- */
+
+.card {
+  position: absolute;
+  left: 0;
+  top: calc(var(--i, 0) * var(--fan));
+  width: 100%;
+  height: var(--card-h);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  font: inherit;
+  cursor: grab;
+  touch-action: none;
+  transform-style: preserve-3d;
+  transform: translateY(var(--lift, 0px)) rotateY(var(--flip, 180deg));
+  transition: transform .34s var(--ease), filter .18s var(--ease);
+  will-change: transform;
+}
+
+.card.is-up { --flip: 0deg; }
+.card:not(.is-up) { cursor: default; }
+
+.card > .face,
+.card > .back {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 1px 2px #0006, 0 6px 14px -8px #0009;
+}
+
+.card > .back { transform: rotateY(180deg); }
+
+/* Cards that can't be picked up hand the click to the pile beneath them, so
+   the whole column stays a drop target. */
+.card.is-dead { cursor: default; pointer-events: none; }
+
+/* In a flat stack every card sits in exactly the same place, so two dozen
+   shadows pile up into a black halo. Only the top of the stack is drawn. */
+.card.is-buried { display: none; }
+
+/* Selection: the card lifts clear of the table and keeps the mint ring. */
+.card.is-picked { --lift: calc(var(--card-h) * -.1); z-index: 40; }
+.card.is-picked > .face {
+  box-shadow: 0 0 0 2px var(--mint), 0 14px 26px -8px #000c;
+}
+
+@media (hover: hover) {
+  .card.is-up:not(.is-dead):hover { filter: brightness(1.045); }
+}
+
+/* --- dragging ------------------------------------------------------------ */
+
+/* The card tracks the pointer exactly, so it must not ease behind it, and it
+   must not intercept the hit test that decides where it lands. */
+.card.is-dragging {
+  transform: translate(var(--dx, 0px), var(--dy, 0px))
+             translateY(var(--lift, 0px))
+             rotateY(var(--flip));
+  transition: none;
+  pointer-events: none;
+  z-index: 60;
+  cursor: grabbing;
+}
+.card.is-dragging > .face {
+  box-shadow: 0 0 0 2px var(--mint), 0 22px 38px -10px #000e;
+}
+
+
+/* --- face ---------------------------------------------------------------- */
+
+.face {
+  background: linear-gradient(168deg, #FFFCF5 0%, var(--paper) 58%, #EFE7D6 100%);
+  border: 1px solid var(--paper-edge);
+  color: var(--ink);
+  overflow: hidden;
+}
+.face::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--card-w) * .035);
+  border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  border-radius: calc(var(--radius) * .55);
+  pointer-events: none;
+}
+
+.card[data-color="r"] .face { color: var(--rouge); }
+
+/* The index lives in the margin, as it does on a printed card, so the pips can
+   use nearly the full height without colliding with it. */
+.idx {
+  position: absolute;
+  top: calc(var(--card-w) * .05);
+  left: calc(var(--card-w) * .06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: .92;
+  font-size: max(8px, calc(var(--card-w) * .17));
+  font-weight: 600;
+  letter-spacing: -.04em;
+  font-variant-numeric: lining-nums;
+}
+.idx .pip { font-size: .68em; }
+.idx-b {
+  top: auto;
+  left: auto;
+  right: calc(var(--card-w) * .06);
+  bottom: calc(var(--card-w) * .05);
+  transform: rotate(180deg);
+}
+
+.art {
+  position: absolute;
+  inset: calc(var(--card-w) * .07) calc(var(--card-w) * .05);
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+/* Number cards get the real pip layout, laid out on a 3 x 13 grid. */
+.art-pips {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(13, 1fr);
+  width: 56%;
+  height: 100%;
+}
+.art-pips > span {
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--card-w) * .16);
+  line-height: 0;
+}
+
+/* 2 */
+.art-pips[data-rank="2"] > :nth-child(1) { grid-area: 1 / 2; }
+.art-pips[data-rank="2"] > :nth-child(2) { grid-area: 13 / 2; transform: rotate(180deg); }
+
+/* 3 */
+.art-pips[data-rank="3"] > :nth-child(1) { grid-area: 1 / 2; }
+.art-pips[data-rank="3"] > :nth-child(2) { grid-area: 7 / 2; }
+.art-pips[data-rank="3"] > :nth-child(3) { grid-area: 13 / 2; transform: rotate(180deg); }
+
+/* 4 */
+.art-pips[data-rank="4"] > :nth-child(1) { grid-area: 1 / 1; }
+.art-pips[data-rank="4"] > :nth-child(2) { grid-area: 1 / 3; }
+.art-pips[data-rank="4"] > :nth-child(3) { grid-area: 13 / 1; transform: rotate(180deg); }
+.art-pips[data-rank="4"] > :nth-child(4) { grid-area: 13 / 3; transform: rotate(180deg); }
+
+/* 5 */
+.art-pips[data-rank="5"] > :nth-child(1) { grid-area: 1 / 1; }
+.art-pips[data-rank="5"] > :nth-child(2) { grid-area: 1 / 3; }
+.art-pips[data-rank="5"] > :nth-child(3) { grid-area: 7 / 2; }
+.art-pips[data-rank="5"] > :nth-child(4) { grid-area: 13 / 1; transform: rotate(180deg); }
+.art-pips[data-rank="5"] > :nth-child(5) { grid-area: 13 / 3; transform: rotate(180deg); }
+
+/* 6 */
+.art-pips[data-rank="6"] > :nth-child(1) { grid-area: 1 / 1; }
+.art-pips[data-rank="6"] > :nth-child(2) { grid-area: 1 / 3; }
+.art-pips[data-rank="6"] > :nth-child(3) { grid-area: 7 / 1; }
+.art-pips[data-rank="6"] > :nth-child(4) { grid-area: 7 / 3; }
+.art-pips[data-rank="6"] > :nth-child(5) { grid-area: 13 / 1; transform: rotate(180deg); }
+.art-pips[data-rank="6"] > :nth-child(6) { grid-area: 13 / 3; transform: rotate(180deg); }
+
+/* 7 */
+.art-pips[data-rank="7"] > :nth-child(1) { grid-area: 1 / 1; }
+.art-pips[data-rank="7"] > :nth-child(2) { grid-area: 1 / 3; }
+.art-pips[data-rank="7"] > :nth-child(3) { grid-area: 4 / 2; }
+.art-pips[data-rank="7"] > :nth-child(4) { grid-area: 7 / 1; }
+.art-pips[data-rank="7"] > :nth-child(5) { grid-area: 7 / 3; }
+.art-pips[data-rank="7"] > :nth-child(6) { grid-area: 13 / 1; transform: rotate(180deg); }
+.art-pips[data-rank="7"] > :nth-child(7) { grid-area: 13 / 3; transform: rotate(180deg); }
+
+/* 8 */
+.art-pips[data-rank="8"] > :nth-child(1) { grid-area: 1 / 1; }
+.art-pips[data-rank="8"] > :nth-child(2) { grid-area: 1 / 3; }
+.art-pips[data-rank="8"] > :nth-child(3) { grid-area: 4 / 2; }
+.art-pips[data-rank="8"] > :nth-child(4) { grid-area: 7 / 1; }
+.art-pips[data-rank="8"] > :nth-child(5) { grid-area: 7 / 3; }
+.art-pips[data-rank="8"] > :nth-child(6) { grid-area: 10 / 2; transform: rotate(180deg); }
+.art-pips[data-rank="8"] > :nth-child(7) { grid-area: 13 / 1; transform: rotate(180deg); }
+.art-pips[data-rank="8"] > :nth-child(8) { grid-area: 13 / 3; transform: rotate(180deg); }
+
+/* 9 */
+.art-pips[data-rank="9"] > :nth-child(1) { grid-area: 1 / 1; }
+.art-pips[data-rank="9"] > :nth-child(2) { grid-area: 1 / 3; }
+.art-pips[data-rank="9"] > :nth-child(3) { grid-area: 5 / 1; }
+.art-pips[data-rank="9"] > :nth-child(4) { grid-area: 5 / 3; }
+.art-pips[data-rank="9"] > :nth-child(5) { grid-area: 7 / 2; }
+.art-pips[data-rank="9"] > :nth-child(6) { grid-area: 9 / 1; transform: rotate(180deg); }
+.art-pips[data-rank="9"] > :nth-child(7) { grid-area: 9 / 3; transform: rotate(180deg); }
+.art-pips[data-rank="9"] > :nth-child(8) { grid-area: 13 / 1; transform: rotate(180deg); }
+.art-pips[data-rank="9"] > :nth-child(9) { grid-area: 13 / 3; transform: rotate(180deg); }
+
+/* 10 */
+.art-pips[data-rank="10"] > :nth-child(1) { grid-area: 1 / 1; }
+.art-pips[data-rank="10"] > :nth-child(2) { grid-area: 1 / 3; }
+.art-pips[data-rank="10"] > :nth-child(3) { grid-area: 3 / 2; }
+.art-pips[data-rank="10"] > :nth-child(4) { grid-area: 5 / 1; }
+.art-pips[data-rank="10"] > :nth-child(5) { grid-area: 5 / 3; }
+.art-pips[data-rank="10"] > :nth-child(6) { grid-area: 9 / 1; transform: rotate(180deg); }
+.art-pips[data-rank="10"] > :nth-child(7) { grid-area: 9 / 3; transform: rotate(180deg); }
+.art-pips[data-rank="10"] > :nth-child(8) { grid-area: 11 / 2; transform: rotate(180deg); }
+.art-pips[data-rank="10"] > :nth-child(9) { grid-area: 13 / 1; transform: rotate(180deg); }
+.art-pips[data-rank="10"] > :nth-child(10) { grid-area: 13 / 3; transform: rotate(180deg); }
+
+/* Aces: the suit alone, held inside a thin ring. */
+.art-ace {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 54%;
+  aspect-ratio: 1;
+  font-size: calc(var(--card-w) * .4);
+  line-height: 0;
+}
+.art-ace::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: .28;
+}
+
+/* Court cards are two-way, like the real thing: the same figure upright at the
+   top and inverted at the bottom, divided by a rule across the middle. */
+.art-court {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  width: 64%;
+  height: 74%;
+  border: 1.5px solid color-mix(in srgb, currentColor 55%, transparent);
+  border-radius: calc(var(--radius) * .5);
+  overflow: hidden;
+}
+.court-half {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .12em;
+  line-height: 1;
+  font-size: calc(var(--card-w) * .3);
+  font-weight: 700;
+  letter-spacing: -.04em;
+}
+.court-half:last-child {
+  transform: rotate(180deg);
+  border-top: 1.5px solid color-mix(in srgb, currentColor 55%, transparent);
+}
+.court-half i { font-style: normal; font-size: .74em; }
+
+/* --- back ---------------------------------------------------------------- */
+
+.back {
+  background:
+    repeating-linear-gradient(45deg,
+      transparent 0 calc(var(--card-w) * .07),
+      #63D9C40F  calc(var(--card-w) * .07) calc(var(--card-w) * .085)),
+    linear-gradient(160deg, #4A3760 0%, #322547 55%, #241A34 100%);
+  border: 1px solid #ffffff1f;
+  display: grid;
+  place-items: center;
+}
+.back::before {
+  content: "";
+  position: absolute;
+  inset: 15%;
+  border: 2px solid color-mix(in srgb, var(--mint) 55%, transparent);
+  border-radius: calc(var(--radius) * .8);
+}
+.back::after {
+  content: "";
+  position: absolute;
+  inset: 29%;
+  border: 2px solid color-mix(in srgb, var(--ochre) 55%, transparent);
+  border-top-color: transparent;
+  border-radius: calc(var(--radius) * .5);
+}
+
+/* --------------------------------------------------------------- motion -- */
+
+@keyframes deal {
+  from { transform: translateY(-16dvh) rotateY(var(--flip)) scale(.94); opacity: 0; }
+  to   { transform: translateY(0) rotateY(var(--flip)) scale(1); opacity: 1; }
+}
+.card.is-dealing { animation: deal .34s var(--ease) both; animation-delay: var(--d, 0s); }
+
+@keyframes home {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ochre) 70%, transparent); }
+  100% { box-shadow: 0 0 0 14px transparent; }
+}
+.pile-foundation.is-home::before { animation: home .55s var(--ease); }
+
+/* ------------------------------------------------------------- cascade -- */
+
+/* Fifty-two cards leave the foundations, bounce off the bottom of the table
+   and sail out over the edge. Each keyframe carries its own easing, so the
+   drops accelerate and the rebounds slow at the top the way a real card does. */
+@keyframes fall {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    animation-timing-function: cubic-bezier(.45, 0, 1, 1);
+  }
+  20% {
+    transform: translate(calc(var(--fx) * .2), var(--fh)) rotate(calc(var(--fr) * .2));
+    animation-timing-function: cubic-bezier(0, .5, .35, 1);
+  }
+  37% {
+    transform: translate(calc(var(--fx) * .37), calc(var(--fh) - 27vh)) rotate(calc(var(--fr) * .37));
+    animation-timing-function: cubic-bezier(.45, 0, 1, 1);
+  }
+  52% {
+    transform: translate(calc(var(--fx) * .52), var(--fh)) rotate(calc(var(--fr) * .52));
+    animation-timing-function: cubic-bezier(0, .5, .35, 1);
+  }
+  64% {
+    transform: translate(calc(var(--fx) * .64), calc(var(--fh) - 14vh)) rotate(calc(var(--fr) * .64));
+    animation-timing-function: cubic-bezier(.45, 0, 1, 1);
+  }
+  75% {
+    transform: translate(calc(var(--fx) * .75), var(--fh)) rotate(calc(var(--fr) * .75));
+    animation-timing-function: cubic-bezier(0, .5, .35, 1);
+  }
+  83% {
+    transform: translate(calc(var(--fx) * .83), calc(var(--fh) - 6vh)) rotate(calc(var(--fr) * .83));
+    animation-timing-function: cubic-bezier(.45, 0, 1, 1);
+  }
+  90% {
+    transform: translate(calc(var(--fx) * .9), var(--fh)) rotate(calc(var(--fr) * .9));
+    animation-timing-function: linear;
+  }
+  100% {
+    transform: translate(var(--fx), var(--fh)) rotate(var(--fr));
+  }
+}
+
+.card.is-falling {
+  /* Below the curtain, so the last cards blur behind the score. */
+  z-index: 45;
+  pointer-events: none;
+  animation: fall 2.4s both var(--fd, 0s);
+}
+
+/* A flat stack hides all but its top two cards. A card in flight is never
+   hidden — all thirteen of each suit have to leave the foundation. */
+.card.is-falling.is-buried { display: block; }
+
+/* Nothing on the table responds once the cards are in the air. */
+body.is-won .pile { pointer-events: none; }
+
+/* ------------------------------------------------------------- win state -- */
+
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--pad);
+  background: color-mix(in srgb, var(--plum-deep) 82%, transparent);
+  backdrop-filter: blur(6px);
+  animation: fade .45s var(--ease) both;
+}
+.curtain[hidden] { display: none; }
+
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+.won {
+  width: min(24rem, 100%);
+  text-align: center;
+  padding: clamp(1.4rem, 5vw, 2.2rem);
+  border-radius: 16px;
+  background: linear-gradient(var(--plum-lit), var(--plum));
+  border: 1px solid #ffffff1f;
+  box-shadow: 0 30px 70px -20px #000c;
+  animation: rise .5s var(--ease) both .08s;
+}
+
+@keyframes rise {
+  from { transform: translateY(14px) scale(.97); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+.won-mark {
+  display: block;
+  width: 2.4rem; height: 2.4rem;
+  margin: 0 auto 1rem;
+  position: relative;
+  border: 2.5px solid var(--mint);
+  border-radius: 10px;
+}
+/* A circle reads as a travelling arc at every angle; a broken square does not. */
+.won-mark::before {
+  content: ""; position: absolute; inset: 5px;
+  border: 2.5px solid var(--ochre);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 2.6s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.won h2 {
+  margin: 0 0 1.2rem;
+  font-size: clamp(1.3rem, 5.5vw, 1.7rem);
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+.won-stats {
+  display: flex;
+  justify-content: center;
+  gap: clamp(1rem, 6vw, 2rem);
+  margin: 0 0 1.6rem;
+}
+.won-stats dt {
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: .58rem; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--on-dark-mute);
+}
+.won-stats dd {
+  margin: .2rem 0 0;
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------ landscape -- */
+
+/* Short and wide (phone on its side): reclaim height from the rails. */
+@media (max-height: 500px) and (orientation: landscape) {
+  :root { --rail-h: 40px; --card-w: min(calc((100dvw - 2 * var(--pad) - 6 * var(--gap)) / 7), 82px); }
+  .brand-studio, .stat-wins { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

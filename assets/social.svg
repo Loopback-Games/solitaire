@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="Solitaire by Loopback Games">
+  <defs>
+    <radialGradient id="table" cx="50%" cy="34%" r="80%">
+      <stop offset="0%" stop-color="#3A2C4A"/>
+      <stop offset="46%" stop-color="#2A2036"/>
+      <stop offset="100%" stop-color="#1E1728"/>
+    </radialGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#FFFCF5"/>
+      <stop offset="100%" stop-color="#EFE7D6"/>
+    </linearGradient>
+    <linearGradient id="back" x1="0" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#4A3760"/>
+      <stop offset="100%" stop-color="#241A34"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#table)"/>
+
+  <g transform="translate(96 232) rotate(-9)">
+    <rect width="150" height="213" rx="12" fill="url(#back)" stroke="#ffffff26" stroke-width="2"/>
+    <rect x="23" y="32" width="104" height="149" rx="9" fill="none" stroke="#63D9C4" stroke-opacity=".55" stroke-width="5"/>
+    <path d="M96 68H54v77h42V96" fill="none" stroke="#E9A845" stroke-opacity=".55" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(258 208) rotate(-3)">
+    <rect width="150" height="213" rx="12" fill="url(#paper)"/>
+    <text x="16" y="42" font-family="Familjen Grotesk, sans-serif" font-size="34" font-weight="600" fill="#CF4436">A♥</text>
+    <text x="75" y="140" font-family="Familjen Grotesk, sans-serif" font-size="86" text-anchor="middle" fill="#CF4436">♥</text>
+  </g>
+
+  <g transform="translate(420 218) rotate(4)">
+    <rect width="150" height="213" rx="12" fill="url(#paper)"/>
+    <text x="16" y="42" font-family="Familjen Grotesk, sans-serif" font-size="34" font-weight="600" fill="#241C2E">K♠</text>
+    <rect x="38" y="76" width="74" height="74" rx="8" fill="#241C2E" fill-opacity=".08" stroke="#241C2E" stroke-width="3"/>
+    <text x="75" y="128" font-family="Familjen Grotesk, sans-serif" font-size="52" font-weight="700" text-anchor="middle" fill="#241C2E">K</text>
+  </g>
+
+  <g transform="translate(700 236)">
+    <text font-family="DM Mono, monospace" font-size="26" letter-spacing="6" fill="#3E9C8C">LOOPBACK GAMES</text>
+    <text y="104" font-family="Familjen Grotesk, sans-serif" font-size="112" font-weight="700" fill="#EDE6F2">Solitaire</text>
+    <text y="158" font-family="Familjen Grotesk, sans-serif" font-size="30" fill="#A395B0">Klondike. In your browser. Nothing to install.</text>
+  </g>
+</svg>
