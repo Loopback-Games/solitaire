@@ -133,3 +133,71 @@ test('every card face renders a rank and a suit', async ({ page }) => {
     expect(f.colour).toBe((f.id / 13 | 0) === 1 || (f.id / 13 | 0) === 2 ? 'r' : 'b');
   }
 });
+
+test('no face-down card ever shows its face while the hand is dealt', async ({ page }) => {
+  await page.goto(DEAL);
+  await page.waitForFunction(() => !document.querySelector('.card.is-dealing'));
+  await page.click('#btn-new');
+
+  // Sample right through the deal animation rather than after it.
+  let caught = [];
+  for (let i = 0; i < 14; i++) {
+    await page.waitForTimeout(35);
+    caught = await page.evaluate(() => {
+      const bad = [];
+      for (const c of document.querySelectorAll('.card')) {
+        if (c.classList.contains('is-up')) continue;
+        const cs = getComputedStyle(c);
+        // A card with no box cannot be seen; the buried stack is drawn as none.
+        if (cs.display === 'none' || !c.getClientRects().length) continue;
+        // m11 is cos of the Y-rotation: positive means turned toward the reader.
+        if (new DOMMatrix(cs.transform).m11 > 0) bad.push(`${c.dataset.id} turned toward us`);
+        // A grouping property forces transform-style to flat, which defeats
+        // backface-visibility and shows the face mirrored. getComputedStyle
+        // still reports preserve-3d in that state, so test the causes instead.
+        const grouping =
+          cs.opacity !== '1' || cs.filter !== 'none' || cs.mixBlendMode !== 'normal' ||
+          cs.clipPath !== 'none' || cs.maskImage !== 'none' || cs.contain.includes('paint');
+        if (grouping) bad.push(`${c.dataset.id} flattened by a grouping property`);
+      }
+      return bad;
+    });
+    if (caught.length) break;
+  }
+  expect(caught, 'the deal never exposes a card').toEqual([]);
+});
+
+test('no large card art is sliced by the card fanned over it', async ({ page }) => {
+  await page.goto(DEAL);
+  await page.waitForFunction(() => !document.querySelector('.card.is-dealing'));
+
+  const intruding = await page.evaluate(() => {
+    const t = document.querySelector('[data-pile="t0"]');
+    const probe = document.createElement('div');
+    probe.style.height = getComputedStyle(t).getPropertyValue('--fan');
+    t.appendChild(probe);
+    const fan = probe.getBoundingClientRect().height;
+    probe.remove();
+
+    const bad = [];
+    for (const c of document.querySelectorAll('.card')) {
+      c.classList.add('is-up');
+      const top = c.getBoundingClientRect().top;
+      // Pips are small discrete marks and read as texture when clipped. Rings
+      // and letters are single large shapes and must clear the strip whole.
+      for (const a of c.querySelectorAll('.art-ace, .art-court b, .art-court i, .art-big b, .art-big i')) {
+        if (getComputedStyle(a).display === 'none' || !a.getClientRects().length) continue;
+        if (a.getBoundingClientRect().top - top < fan) bad.push(c.getAttribute('aria-label'));
+      }
+    }
+    return bad;
+  });
+  expect(intruding).toEqual([]);
+});
+
+test('the index stays readable on a small card', async ({ page }) => {
+  await page.goto(DEAL);
+  const px = await page.evaluate(() =>
+    parseFloat(getComputedStyle(document.querySelector('.idx')).fontSize));
+  expect(px, 'rank is legible at any card size').toBeGreaterThanOrEqual(12);
+});

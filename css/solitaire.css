@@ -51,12 +51,14 @@
 
   /* Vertical room the tableau gets to fan into. */
   --pile-h: calc(var(--content-h) - var(--card-h) - var(--gap));
-  /* On a tall phone there is height going spare, so the fan opens up: the
-     pile fills the table and each card gets a thumb-sized strip to tap. */
+  /* How far a face-up card is offset from the one under it. About a third of
+     a card is what a spread deck actually shows: enough for the index and a
+     little breathing room, without a band of blank paper between every rank.
+     Long columns shrink below this; nothing ever grows past it. */
   --fan-max: clamp(
-    calc(var(--card-h) * .22),
+    calc(var(--card-h) * .2),
     calc(var(--pile-h) / 9),
-    calc(var(--card-h) * .5)
+    calc(var(--card-h) * .32)
   );
 }
 
@@ -284,7 +286,7 @@ body {
     var(--fan-max),
     max(
       calc((var(--pile-h) - var(--card-h)) / max(var(--n), 1)),
-      calc(var(--card-h) * .07)
+      calc(var(--card-h) * .065)
     )
   );
 }
@@ -367,8 +369,12 @@ body {
   font: inherit;
   cursor: grab;
   touch-action: none;
+  /* Every card carries a facing. Without it here, `var(--flip)` inside the
+     deal keyframes resolves to nothing on a face-down card, the transform is
+     invalid, and the card deals face up. */
+  --flip: 180deg;
   transform-style: preserve-3d;
-  transform: translateY(var(--lift, 0px)) rotateY(var(--flip, 180deg));
+  transform: translateY(var(--lift, 0px)) rotateY(var(--flip));
   transition: transform .34s var(--ease), filter .18s var(--ease);
   will-change: transform;
 }
@@ -453,7 +459,7 @@ body {
   flex-direction: column;
   align-items: center;
   line-height: .92;
-  font-size: max(8px, calc(var(--card-w) * .17));
+  font-size: max(12px, calc(var(--card-w) * .17));
   font-weight: 600;
   letter-spacing: -.04em;
   font-variant-numeric: lining-nums;
@@ -581,32 +587,79 @@ body {
   opacity: .28;
 }
 
-/* Court cards are two-way, like the real thing: the same figure upright at the
-   top and inverted at the bottom, divided by a rule across the middle. */
+/* Court cards: one large letter in a portrait frame with its suit beneath.
+   Two half-size letters were more faithful to a printed deck but far harder to
+   read at the size a phone gives a card, and reading the card wins. */
+/* No frame around the letter: a frame's top edge is the one part of a court
+   card tall enough to show in a fanned strip, where it reads as a stray line
+   across the card above. The letter and its rule both sit below the deepest
+   fan, so a fanned court card shows nothing but its index. */
 .art-court {
+  height: 100%;
   display: grid;
-  grid-template-rows: 1fr 1fr;
-  width: 64%;
-  height: 74%;
-  border: 1.5px solid color-mix(in srgb, currentColor 55%, transparent);
-  border-radius: calc(var(--radius) * .5);
-  overflow: hidden;
+  justify-items: center;
+  align-content: center;
+  gap: calc(var(--card-w) * .04);
+  /* Sits the letter below the deepest fan, so a fanned court card shows its
+     index and nothing else. A sliced pip reads as texture; a sliced letter
+     reads as a fault. */
+  padding-top: 30%;
 }
-.court-half {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: .12em;
-  line-height: 1;
-  font-size: calc(var(--card-w) * .3);
+.art-court b {
+  font-size: calc(var(--card-w) * .52);
   font-weight: 700;
-  letter-spacing: -.04em;
+  letter-spacing: -.06em;
+  line-height: .82;
 }
-.court-half:last-child {
-  transform: rotate(180deg);
-  border-top: 1.5px solid color-mix(in srgb, currentColor 55%, transparent);
+.art-court i {
+  font-style: normal;
+  font-size: calc(var(--card-w) * .24);
+  line-height: 1;
+  padding-top: calc(var(--card-w) * .04);
+  border-top: 1px solid color-mix(in srgb, currentColor 35%, transparent);
 }
-.court-half i { font-style: normal; font-size: .74em; }
+
+/* The large-rank face, used wherever a card is too small to carry pips. */
+.art-big { display: none; }
+.art-big b {
+  font-size: calc(var(--card-w) * .56);
+  font-weight: 700;
+  letter-spacing: -.06em;
+  line-height: .84;
+}
+.art-big i {
+  font-style: normal;
+  font-size: calc(var(--card-w) * .3);
+  line-height: 1;
+}
+
+/* Below this the pips are smaller than a grain of rice, so the card switches to
+   an index you can actually read plus a large rank. Two things matter here:
+   the index carries the card while it is fanned, and no art may sit high enough
+   for the card above to slice it in half — a sliced pip reads as texture, a
+   sliced numeral reads as broken. So the art drops below the deepest fan. */
+@media (max-width: 680px) {
+  .idx {
+    flex-direction: row;
+    align-items: center;
+    gap: .1em;
+    font-size: max(13px, calc(var(--card-w) * .32));
+  }
+  .idx .pip { font-size: .78em; }
+
+  /* A band that clears the deepest fan above and the second index below, so
+     nothing on a small card is ever sliced or overlapped. */
+  .art { top: 38%; bottom: 30%; }
+  .art-pips { display: none; }
+  .art-big { display: grid; place-items: center; }
+  .art-big b { display: none; }                     /* the rank lives in the corners */
+  .art-big i { font-size: calc(var(--card-w) * .3); }
+
+  .art-ace { width: 40%; font-size: calc(var(--card-w) * .28); }
+  .art-ace::before { border-radius: 50%; }
+  .art-court b { font-size: calc(var(--card-w) * .34); }
+  .art-court i { display: none; }
+}
 
 /* --- back ---------------------------------------------------------------- */
 
@@ -641,9 +694,13 @@ body {
 
 /* --------------------------------------------------------------- motion -- */
 
+/* No opacity here, deliberately. Opacity below 1 is a grouping property: it
+   forces transform-style to flat, backface-visibility stops applying, and every
+   face-down card deals face up and mirrored. The cards fly in from above the
+   header instead, which hides them just as well. */
 @keyframes deal {
-  from { transform: translateY(-16dvh) rotateY(var(--flip)) scale(.94); opacity: 0; }
-  to   { transform: translateY(0) rotateY(var(--flip)) scale(1); opacity: 1; }
+  from { transform: translateY(-34dvh) rotateY(var(--flip)) scale(.96); }
+  to   { transform: translateY(0) rotateY(var(--flip)) scale(1); }
 }
 .card.is-dealing { animation: deal .34s var(--ease) both; animation-delay: var(--d, 0s); }
 
