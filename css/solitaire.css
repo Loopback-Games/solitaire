@@ -620,18 +620,21 @@ body {
   display: grid;
   place-items: center;
 }
+/* The motif sits below the strip a fanned card shows, so a column of face-down
+   cards reads as plain card edges rather than a ladder of mint lines — mint
+   means "in your hand" and nothing else should borrow it. */
 .back::before {
   content: "";
   position: absolute;
-  inset: 15%;
-  border: 2px solid color-mix(in srgb, var(--mint) 55%, transparent);
+  inset: 25% 16% 11%;
+  border: 2px solid color-mix(in srgb, var(--mint) 46%, transparent);
   border-radius: calc(var(--radius) * .8);
 }
 .back::after {
   content: "";
   position: absolute;
-  inset: 29%;
-  border: 2px solid color-mix(in srgb, var(--ochre) 55%, transparent);
+  inset: 35% 27% 21%;
+  border: 2px solid color-mix(in srgb, var(--ochre) 50%, transparent);
   border-top-color: transparent;
   border-radius: calc(var(--radius) * .5);
 }
