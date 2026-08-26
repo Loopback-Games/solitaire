@@ -197,6 +197,14 @@ body {
 @media (pointer: coarse) {
   .ctl { min-height: 44px; padding-inline: clamp(.9em, 3.4vw, 1.4em); }
 }
+/* Six controls, each needing a touch target, with 360px to put them in. The
+   narrowest phones drop the word doing the least work and tighten the padding;
+   the 44px height that makes them tappable is untouched. */
+@media (max-width: 420px) {
+  .rail-bottom .ctl { padding-inline: .6em; }
+  .ctl-long { display: none; }
+}
+
 .ctl:hover:not(:disabled) { background: #ffffff1c; border-color: #ffffff33; }
 .ctl:active:not(:disabled) { transform: translateY(1px); }
 .ctl:disabled { opacity: .34; cursor: default; }
@@ -761,6 +769,39 @@ body {
 /* Nothing on the table responds once the cards are in the air. */
 body.is-won .pile { pointer-events: none; }
 
+/* ----------------------------------------------------------------- hint -- */
+
+/* A hint is a suggestion, not a state. It borrows ochre, because ochre already
+   means "it can land here", but it breathes rather than sitting still and it
+   clears itself after a few beats. Mint stays reserved for the card actually in
+   your hand and is never lent to anything else. */
+
+.card.is-hint > .face,
+.card.is-hint > .back,
+.pile.is-hint-to > .card:last-of-type > .face,
+.pile.is-hint-to > .card:last-of-type > .back {
+  animation: hint 1.15s var(--ease) 3;
+}
+.pile.is-hint-to:not(:has(.card))::before {
+  animation: hint-slot 1.15s var(--ease) 3;
+}
+
+@keyframes hint {
+  0%, 100% { box-shadow: 0 1px 2px #0006, 0 6px 14px -8px #0009; }
+  50%      { box-shadow: 0 0 0 3px var(--ochre), 0 8px 20px -8px #0009; }
+}
+@keyframes hint-slot {
+  0%, 100% { border-color: #ffffff1a; background: #00000026; }
+  50%      { border-color: var(--ochre); background: color-mix(in srgb, var(--ochre) 20%, transparent); }
+}
+
+.stuck-note {
+  margin: -.6rem 0 1.4rem;
+  font-size: clamp(.82rem, 2.6vw, .92rem);
+  line-height: 1.45;
+  color: var(--on-dark-mute);
+}
+
 /* ---------------------------------------------------------------- sheet -- */
 
 /* Eleven controls will not survive a flat row on a 360px phone. The rail keeps
@@ -981,5 +1022,20 @@ body.is-won .pile { pointer-events: none; }
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
+  }
+}
+
+/* A hint that only exists as an animation disappears entirely once animation
+   is switched off, so reduced motion gets the same ring, held still. */
+@media (prefers-reduced-motion: reduce) {
+  .card.is-hint > .face,
+  .card.is-hint > .back,
+  .pile.is-hint-to > .card:last-of-type > .face,
+  .pile.is-hint-to > .card:last-of-type > .back {
+    box-shadow: 0 0 0 3px var(--ochre), 0 6px 14px -8px #0009;
+  }
+  .pile.is-hint-to:not(:has(.card))::before {
+    border-color: var(--ochre);
+    background: color-mix(in srgb, var(--ochre) 20%, transparent);
   }
 }

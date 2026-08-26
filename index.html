@@ -85,10 +85,11 @@
 </main>
 
 <footer class="rail rail-bottom">
-  <button type="button" class="ctl" id="btn-new">New deal</button>
+  <button type="button" class="ctl" id="btn-new">New<span class="ctl-long"> deal</span></button>
   <button type="button" class="ctl" id="btn-undo" disabled>Undo</button>
   <button type="button" class="ctl" id="btn-redo" disabled>Redo</button>
-  <button type="button" class="ctl ctl-go" id="btn-auto" hidden>Finish it</button>
+  <button type="button" class="ctl" id="btn-hint">Hint</button>
+  <button type="button" class="ctl ctl-go" id="btn-auto" hidden>Finish<span class="ctl-long"> it</span></button>
   <button type="button" class="ctl" id="btn-more" aria-expanded="false" aria-controls="sheet">More</button>
 </footer>
 
@@ -136,6 +137,19 @@
 
   <button type="button" class="ctl sheet-done" id="btn-sheet-done">Done</button>
 </section>
+
+<div class="curtain" id="stuck" hidden>
+  <div class="won" role="dialog" aria-modal="true" aria-labelledby="stuck-title">
+    <h2 id="stuck-title">Nothing left to play.</h2>
+    <p class="stuck-note">No card on the table can move, and nothing left in the
+      stock fits anywhere. Undo is still open if you want to try another line.</p>
+    <div class="won-actions">
+      <button type="button" class="ctl ctl-go" id="btn-stuck-new">New deal</button>
+      <button type="button" class="ctl" id="btn-stuck-replay">Replay this hand</button>
+      <button type="button" class="ctl" id="btn-stuck-stay">Keep looking</button>
+    </div>
+  </div>
+</div>
 
 <p class="sr-only" role="status" aria-live="polite" id="announce"></p>
 

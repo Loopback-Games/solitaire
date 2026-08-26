@@ -226,7 +226,7 @@ test('the rail survives a narrow phone, Finish it and all', async ({ page }) => 
     };
   });
 
-  expect(rail.count, 'New, Undo, Redo, Finish it and More').toBe(5);
+  expect(rail.count, 'New, Undo, Redo, Hint, Finish it and More').toBe(6);
   expect(rail.spill, 'no control hangs off the rail').toBe(false);
   expect(rail.rows, 'the rail stays one row').toBe(1);
 });

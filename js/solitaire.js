@@ -7,6 +7,7 @@
  * viewport without asking JavaScript.
  */
 import { read, write, saveGame, clearGame } from './store.js';
+import { moves, dead } from './hint.js';
 
 /* ------------------------------------------------------------- deck --- */
 
@@ -39,7 +40,9 @@ const el = {
   count:     $('#stock-count'),
   undo:      $('#btn-undo'),
   redo:      $('#btn-redo'),
+  hint:      $('#btn-hint'),
   auto:      $('#btn-auto'),
+  stuck:     $('#stuck'),
   more:      $('#btn-more'),
   sheet:     $('#sheet'),
   veil:      $('#sheet-veil'),
@@ -118,6 +121,9 @@ let drag = null, swallowClick = false, curtainTimer = null;
 // The number that produced the hand on the table, and whether that hand has
 // been counted as played — a resumed game must not be counted a second time.
 let dealSeed = 0, counted = false, isDaily = false;
+// The move currently being pointed at, how far down the ranked list the player
+// has pressed, and whether this hand has already been called dead.
+let hint = null, hintAt = 0, hintTimer = null, stuckShown = false;
 
 let drawN = read().prefs.drawN === 3 ? 3 : 1;
 
@@ -154,6 +160,9 @@ function fresh(seed = newSeed(), daily = false) {
   elapsed = 0;
   startedAt = null;
   counted = false;
+  dropHint();
+  stuckShown = false;
+  el.stuck.hidden = true;
   el.time.textContent = clock(0);
   stopTimer();
   stopAuto();
@@ -204,11 +213,14 @@ function push() {
   if (history.length > 200) history.shift();
   // Playing on abandons whatever branch you had walked back from.
   redo.length = 0;
+  dropHint();
 }
 
 // Restoring a snapshot is not itself a move, so neither stack is disturbed
 // beyond the one that moves between them.
 function apply(shot) {
+  dropHint();
+  stuckShown = false;
   s.up = shot.up;
   s.moves = shot.moves;
   KEYS.forEach((k, i) => { s[k] = shot.piles[i]; });
@@ -462,6 +474,7 @@ function deal() {
   s.moves++;
   sel = null;
   render();
+  checkStuck();
 }
 
 /* ---------------------------------------------------------- selection --- */
@@ -490,6 +503,7 @@ function place(target) {
   render({ home: FOUNDS.includes(target) ? target : null });
   say(`${name(run[0])} moved.`);
   finish();
+  checkStuck();
   return true;
 }
 
@@ -503,6 +517,7 @@ function sendHome(key, id) {
   render({ home: target });
   say(`${name(id)} home.`);
   finish();
+  checkStuck();
   return true;
 }
 
@@ -685,6 +700,7 @@ function render(opts = {}) {
       node.tabIndex = live ? 0 : -1;
       node.setAttribute('aria-label', up ? name(id) : 'Face-down card');
       node.classList.toggle('is-picked', !!sel && sel.from === k && i >= sel.at);
+      node.classList.toggle('is-hint', !!hint && !hint.deal && hint.from === k && i >= hint.at);
 
       if (opts.deal) {
         node.classList.add('is-dealing');
@@ -696,6 +712,7 @@ function render(opts = {}) {
     while (host.children.length > pile.length) host.lastElementChild.remove();
 
     host.style.setProperty('--n', isTab ? Math.max(offset, 1) : 1);
+    host.classList.toggle('is-hint-to', !!hint && hint.to === k);
     const target = !!sel && canDrop(k);
     host.classList.toggle('is-target', target);
     if (target) { host.tabIndex = 0; host.setAttribute('role', 'button'); }
@@ -731,9 +748,63 @@ function movable(k, i) {
   return i === pile.length - 1 && s.up[pile[i]];
 }
 
+/* --------------------------------------------------------------- hint --- */
+
+/* hint.js reasons about the board as it stands; these helpers read that same
+ * board, so the two cannot disagree about what is on the table. */
+const RULES = { TABLEAU, FOUNDS, top, fits, liftable, rankOf };
+
+function dropHint() {
+  clearTimeout(hintTimer);
+  hintTimer = null;
+  hint = null;
+  hintAt = 0;
+}
+
+/* Pressing again walks down the ranked list rather than repeating the best
+ * move, so a player who has already discounted the obvious one is not told it
+ * twice. The ring clears itself; a hint left standing would read as a state. */
+function showHint() {
+  const list = moves(s, RULES);
+  if (!list.length) {
+    dropHint();
+    render();
+    say('No moves left.');
+    checkStuck();
+    return;
+  }
+
+  const step = hintAt;
+  clearTimeout(hintTimer);
+  hint = list[step % list.length];
+  hintAt = step + 1;
+  render();
+  hintTimer = setTimeout(() => { hint = null; hintTimer = null; render(); }, 3600);
+
+  say(hint.deal ? 'Turn the stock.' : `Try the ${name(s[hint.from][hint.at])}.`);
+}
+
+/* Raised once per hand, and dismissible: the test behind it does not count
+ * pulling a card back off a foundation as an out, so it can be wrong, and being
+ * wrong should cost a tap rather than a game. */
+function checkStuck() {
+  if (stuckShown || autoTimer || won()) return;
+  if (!dead(s, RULES)) return;
+  stuckShown = true;
+  el.stuck.hidden = false;
+  $('#btn-stuck-new').focus();
+  say('No moves left.');
+}
+
+el.hint.addEventListener('click', () => { stopAuto(); showHint(); });
+$('#btn-stuck-new').addEventListener('click', () => { el.stuck.hidden = true; fresh(); say('New deal.'); });
+$('#btn-stuck-replay').addEventListener('click', () => { el.stuck.hidden = true; fresh(dealSeed, isDaily); say('Same hand again.'); });
+$('#btn-stuck-stay').addEventListener('click', () => { el.stuck.hidden = true; });
+
 /* -------------------------------------------------------------- sheet --- */
 
 const sheetOpen = () => !el.sheet.hidden;
+const stuckOpen = () => !el.stuck.hidden;
 
 function showSheet() {
   if (sheetOpen()) return;
@@ -992,8 +1063,13 @@ el.redo.addEventListener('click', redoMove);
 el.auto.addEventListener('click', startAuto);
 
 document.addEventListener('keydown', (ev) => {
-  // While the sheet is up it owns the keyboard; it handles Escape and Tab itself.
+  // While a panel is up it owns the keyboard; the sheet handles Escape and Tab
+  // itself, and the stuck panel only ever needs a way out.
   if (sheetOpen()) return;
+  if (stuckOpen()) {
+    if (ev.key === 'Escape') { el.stuck.hidden = true; ev.preventDefault(); }
+    return;
+  }
   const k = ev.key.toLowerCase();
 
   // Ctrl/Cmd+Z is what a player's hands already know; its shifted form is redo
