@@ -58,8 +58,12 @@ test('the stock deals, empties, and folds the waste back in', async ({ page }) =
 test('draw three deals three at a time and is remembered', async ({ page }) => {
   await page.goto(DEAL);
 
-  await page.click('#btn-draw');
-  await expect(page.locator('#btn-draw')).toHaveAttribute('aria-pressed', 'true');
+  // The draw count lives in the sheet now, as a choice you can see both sides of.
+  await page.click('#btn-more');
+  await page.click('[data-draw="3"]');
+  await expect(page.locator('[data-draw="3"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-draw="1"]')).toHaveAttribute('aria-pressed', 'false');
+  await page.click('#btn-sheet-done');
   await page.click('#stock');
   await expect(pile(page, 'waste')).toHaveCount(3);
   // Only the last three are drawn; the rest of the waste stays hidden.
@@ -68,7 +72,8 @@ test('draw three deals three at a time and is remembered', async ({ page }) => {
   await expect(page.locator('[data-pile="waste"] .card:not([hidden])')).toHaveCount(3);
 
   await page.reload();
-  await expect(page.locator('#draw-n')).toHaveText('3');
+  await page.click('#btn-more');
+  await expect(page.locator('[data-draw="3"]')).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('a card moves onto a legal tableau target and not onto an illegal one', async ({ page }) => {
@@ -163,7 +168,9 @@ test('keyboard shortcuts deal, undo and toggle', async ({ page }) => {
   await expect(page.locator('#stat-moves')).toHaveText('0');
 
   await page.keyboard.press('d');
-  await expect(page.locator('#draw-n')).toHaveText('3');
+  await page.click('#btn-more');
+  await expect(page.locator('[data-draw="3"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.click('#btn-sheet-done');
 
   await page.keyboard.press('n');
   await expect(page.locator('.card')).toHaveCount(52);

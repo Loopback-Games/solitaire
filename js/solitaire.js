@@ -39,14 +39,27 @@ const el = {
   count:     $('#stock-count'),
   undo:      $('#btn-undo'),
   redo:      $('#btn-redo'),
-  draw:      $('#btn-draw'),
-  drawN:     $('#draw-n'),
   auto:      $('#btn-auto'),
+  more:      $('#btn-more'),
+  sheet:     $('#sheet'),
+  veil:      $('#sheet-veil'),
+  done:      $('#btn-sheet-done'),
   curtain:   $('#curtain'),
   wonTime:   $('#won-time'),
   wonMoves:  $('#won-moves'),
   wonBest:   $('#won-best'),
   announce:  $('#announce'),
+};
+
+const segs = [...document.querySelectorAll('[data-draw]')];
+const record = {
+  played:     $('#rec-played'),
+  won:        $('#rec-won'),
+  rate:       $('#rec-rate'),
+  streak:     $('#rec-streak'),
+  bestStreak: $('#rec-best-streak'),
+  bestTime:   $('#rec-best-time'),
+  bestMoves:  $('#rec-best-moves'),
 };
 
 // One element per card, built once and re-parented forever after.
@@ -254,6 +267,7 @@ function restore(g) {
   document.body.classList.remove('is-won');
   el.curtain.hidden = true;
 
+  paintDraw();
   el.time.textContent = clock(elapsed);
   render();
   // The clock picks up again only for a hand that had already started.
@@ -634,6 +648,70 @@ function movable(k, i) {
   return i === pile.length - 1 && s.up[pile[i]];
 }
 
+/* -------------------------------------------------------------- sheet --- */
+
+const sheetOpen = () => !el.sheet.hidden;
+
+function showSheet() {
+  if (sheetOpen()) return;
+  paintRecord();
+  el.veil.hidden = false;
+  el.sheet.hidden = false;
+  el.more.setAttribute('aria-expanded', 'true');
+  el.sheet.querySelector('button').focus();
+}
+
+function hideSheet() {
+  if (!sheetOpen()) return;
+  el.sheet.hidden = true;
+  el.veil.hidden = true;
+  el.more.setAttribute('aria-expanded', 'false');
+  el.more.focus();
+}
+
+// A win rate needs a game to divide by, and a best needs one to have happened;
+// an em dash says "not yet" rather than claiming a nought.
+function paintRecord() {
+  const st = read().stats;
+  record.played.textContent = st.played;
+  record.won.textContent = st.won;
+  record.rate.textContent = st.played ? `${Math.round((st.won / st.played) * 100)}%` : '—';
+  record.streak.textContent = st.streak;
+  record.bestStreak.textContent = st.bestStreak;
+  record.bestTime.textContent = st.bestTime ? clock(st.bestTime) : '—';
+  record.bestMoves.textContent = st.bestMoves || '—';
+}
+
+function paintDraw() {
+  segs.forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.draw) === drawN)));
+}
+
+function setDraw(n) {
+  const next = n === 3 ? 3 : 1;
+  if (next === drawN) return;
+  drawN = next;
+  paintDraw();
+  write({ prefs: { ...read().prefs, drawN } });
+  persist();
+  say(`Drawing ${drawN} at a time.`);
+}
+
+el.more.addEventListener('click', showSheet);
+el.done.addEventListener('click', hideSheet);
+el.veil.addEventListener('click', hideSheet);
+segs.forEach((b) => b.addEventListener('click', () => setDraw(Number(b.dataset.draw))));
+
+// The sheet is modal, so focus stays inside it until it is dismissed.
+el.sheet.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') { hideSheet(); return; }
+  if (ev.key !== 'Tab') return;
+  const stops = [...el.sheet.querySelectorAll('button')];
+  const edge = ev.shiftKey ? stops[0] : stops[stops.length - 1];
+  if (document.activeElement !== edge) return;
+  (ev.shiftKey ? stops[stops.length - 1] : stops[0]).focus();
+  ev.preventDefault();
+});
+
 /* -------------------------------------------------------------- drag --- */
 
 // Below this, a press is a tap and the click handler takes it instead.
@@ -777,16 +855,9 @@ el.undo.addEventListener('click', undo);
 el.redo.addEventListener('click', redoMove);
 el.auto.addEventListener('click', startAuto);
 
-el.draw.addEventListener('click', () => {
-  drawN = drawN === 1 ? 3 : 1;
-  el.drawN.textContent = drawN;
-  el.draw.setAttribute('aria-pressed', String(drawN === 3));
-  write({ prefs: { ...read().prefs, drawN } });
-  persist();
-  say(`Drawing ${drawN} at a time.`);
-});
-
 document.addEventListener('keydown', (ev) => {
+  // While the sheet is up it owns the keyboard; it handles Escape and Tab itself.
+  if (sheetOpen()) return;
   const k = ev.key.toLowerCase();
 
   // Ctrl/Cmd+Z is what a player's hands already know; its shifted form is redo
@@ -804,7 +875,7 @@ document.addEventListener('keydown', (ev) => {
   else if (k === 'u') undo();
   else if (k === 'r') redoMove();
   else if (k === 'n') fresh();
-  else if (k === 'd') el.draw.click();
+  else if (k === 'd') setDraw(drawN === 1 ? 3 : 1);
   else return;
   ev.preventDefault();
 });
@@ -817,8 +888,7 @@ document.addEventListener('visibilitychange', () => {
 
 /* -------------------------------------------------------------- boot --- */
 
-el.drawN.textContent = drawN;
-el.draw.setAttribute('aria-pressed', String(drawN === 3));
+paintDraw();
 el.wins.textContent = read().stats.won;
 
 const asked = Number.parseInt(new URLSearchParams(location.search).get('deal'), 10);

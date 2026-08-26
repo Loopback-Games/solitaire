@@ -130,7 +130,9 @@ test('a v1 record is carried across', async ({ page }) => {
   await page.goto(DEAL);
 
   await expect(page.locator('#stat-wins')).toHaveText('5');
-  await expect(page.locator('#draw-n')).toHaveText('3');
+  await page.click('#btn-more');
+  await expect(page.locator('[data-draw="3"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.click('#btn-sheet-done');
 
   const saved = await stored(page);
   expect(saved.v).toBe(2);

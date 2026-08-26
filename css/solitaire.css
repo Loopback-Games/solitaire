@@ -211,12 +211,6 @@ body {
   border-color: color-mix(in srgb, var(--mint) 84%, white);
 }
 
-#btn-draw[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--ochre) 22%, transparent);
-  border-color: color-mix(in srgb, var(--ochre) 60%, transparent);
-  color: var(--ochre);
-}
-
 :where(a, button, .card):focus-visible {
   outline: 2px solid var(--mint);
   outline-offset: 2px;
@@ -766,6 +760,113 @@ body {
 
 /* Nothing on the table responds once the cards are in the air. */
 body.is-won .pile { pointer-events: none; }
+
+/* ---------------------------------------------------------------- sheet -- */
+
+/* Eleven controls will not survive a flat row on a 360px phone. The rail keeps
+   what you reach for during a hand; everything else is one tap away under More.
+   The panel rises from the rail rather than covering the table, so the board
+   you were reading stays in view behind it. */
+
+.sheet-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: color-mix(in srgb, var(--plum-deep) 58%, transparent);
+  backdrop-filter: blur(3px);
+  animation: fade .25s var(--ease) both;
+}
+.sheet-veil[hidden] { display: none; }
+
+.sheet {
+  position: fixed;
+  z-index: 56;
+  inset-inline: 0;
+  margin-inline: auto;
+  bottom: calc(var(--rail-h) + var(--safe-b) + var(--gap));
+  width: min(22rem, calc(100dvw - 2 * var(--pad)));
+  max-height: calc(100dvh - var(--rail-h) - var(--safe-b) - 2 * var(--pad));
+  overflow-y: auto;
+  padding: clamp(1rem, 4vw, 1.4rem);
+  border-radius: 16px;
+  background: linear-gradient(var(--plum-lit), var(--plum));
+  border: 1px solid #ffffff1f;
+  box-shadow: 0 30px 70px -20px #000c;
+  animation: rise .32s var(--ease) both;
+}
+.sheet[hidden] { display: none; }
+
+/* Labels here are set as data, the same as the readouts in the top rail. */
+.sheet-title {
+  margin: 0 0 .9rem;
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: .58rem;
+  font-weight: 400;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--on-dark-mute);
+}
+.sheet h3.sheet-title { margin-top: 1.6rem; }
+
+.sheet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 44px;
+}
+.sheet-label { font-weight: 600; font-size: clamp(.85rem, 2.6vw, .95rem); }
+
+.seg {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #ffffff0f;
+  border: 1px solid #ffffff1a;
+}
+.seg-opt {
+  appearance: none;
+  font: inherit;
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: .85rem;
+  min-width: 3.2rem;
+  padding: .35em .8em;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--on-dark-mute);
+  cursor: pointer;
+  transition: background .18s var(--ease), color .18s var(--ease);
+}
+@media (pointer: coarse) { .seg-opt { min-height: 38px; } }
+.seg-opt:hover { color: var(--on-dark); }
+.seg-opt[aria-pressed="true"] {
+  background: var(--ochre);
+  color: var(--plum-deep);
+  font-weight: 500;
+}
+
+.sheet-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(3.9rem, 1fr));
+  gap: .9rem .6rem;
+  margin: 0;
+}
+.sheet-stats dt {
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: .58rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--on-dark-mute);
+  white-space: nowrap;
+}
+.sheet-stats dd {
+  margin: .2rem 0 0;
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sheet-done { width: 100%; margin-top: 1.6rem; }
 
 /* ------------------------------------------------------------- win state -- */
 

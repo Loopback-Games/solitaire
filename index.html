@@ -88,9 +88,36 @@
   <button type="button" class="ctl" id="btn-new">New deal</button>
   <button type="button" class="ctl" id="btn-undo" disabled>Undo</button>
   <button type="button" class="ctl" id="btn-redo" disabled>Redo</button>
-  <button type="button" class="ctl" id="btn-draw" aria-pressed="false">Draw <span id="draw-n">1</span></button>
   <button type="button" class="ctl ctl-go" id="btn-auto" hidden>Finish it</button>
+  <button type="button" class="ctl" id="btn-more" aria-expanded="false" aria-controls="sheet">More</button>
 </footer>
+
+<div class="sheet-veil" id="sheet-veil" hidden></div>
+
+<section class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+  <h2 class="sheet-title" id="sheet-title">Table</h2>
+
+  <div class="sheet-row">
+    <span class="sheet-label" id="lbl-draw">Draw</span>
+    <div class="seg" role="group" aria-labelledby="lbl-draw">
+      <button type="button" class="seg-opt" data-draw="1" aria-pressed="true">1</button>
+      <button type="button" class="seg-opt" data-draw="3" aria-pressed="false">3</button>
+    </div>
+  </div>
+
+  <h3 class="sheet-title">Record</h3>
+  <dl class="sheet-stats">
+    <div><dt>Played</dt><dd id="rec-played">0</dd></div>
+    <div><dt>Won</dt><dd id="rec-won">0</dd></div>
+    <div><dt>Rate</dt><dd id="rec-rate">—</dd></div>
+    <div><dt>Streak</dt><dd id="rec-streak">0</dd></div>
+    <div><dt>Best run</dt><dd id="rec-best-streak">0</dd></div>
+    <div><dt>Best time</dt><dd id="rec-best-time">—</dd></div>
+    <div><dt>Best moves</dt><dd id="rec-best-moves">—</dd></div>
+  </dl>
+
+  <button type="button" class="ctl sheet-done" id="btn-sheet-done">Done</button>
+</section>
 
 <p class="sr-only" role="status" aria-live="polite" id="announce"></p>
 

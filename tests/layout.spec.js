@@ -201,3 +201,95 @@ test('the index stays readable on a small card', async ({ page }) => {
     parseFloat(getComputedStyle(document.querySelector('.idx')).fontSize));
   expect(px, 'rank is legible at any card size').toBeGreaterThanOrEqual(12);
 });
+
+/* --- the sheet ---------------------------------------------------------- */
+
+test('the rail survives a narrow phone, Finish it and all', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await page.goto(DEAL);
+
+  // Finish it only appears on a solved board, so force it out to measure the
+  // widest the rail ever gets.
+  await page.evaluate(() => { document.querySelector('#btn-auto').hidden = false; });
+
+  const rail = await page.evaluate(() => {
+    const bar = document.querySelector('.rail-bottom');
+    const box = bar.getBoundingClientRect();
+    const kids = [...bar.querySelectorAll('button')].filter((b) => !b.hidden);
+    return {
+      count: kids.length,
+      spill: kids.some((b) => {
+        const r = b.getBoundingClientRect();
+        return r.left < box.left - 1 || r.right > box.right + 1;
+      }),
+      rows: new Set(kids.map((b) => Math.round(b.getBoundingClientRect().top))).size,
+    };
+  });
+
+  expect(rail.count, 'New, Undo, Redo, Finish it and More').toBe(5);
+  expect(rail.spill, 'no control hangs off the rail').toBe(false);
+  expect(rail.rows, 'the rail stays one row').toBe(1);
+});
+
+test('the sheet opens, holds focus, and closes on Esc', async ({ page }) => {
+  await page.goto(DEAL);
+  await expect(page.locator('#sheet')).toBeHidden();
+  await expect(page.locator('#btn-more')).toHaveAttribute('aria-expanded', 'false');
+
+  await page.click('#btn-more');
+  await expect(page.locator('#sheet')).toBeVisible();
+  await expect(page.locator('#btn-more')).toHaveAttribute('aria-expanded', 'true');
+
+  // The panel is centred by auto margins, not by a transform an animation
+  // would overwrite, so it has to sit inside the viewport on every width.
+  for (const width of [360, 412, 1280]) {
+    await page.setViewportSize({ width, height: 740 });
+    const box = await page.locator('#sheet').boundingBox();
+    expect(box.x, `left edge at ${width}px`).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width, `right edge at ${width}px`).toBeLessThanOrEqual(width + 1);
+    expect(Math.abs((box.x + box.width / 2) - width / 2), `centred at ${width}px`).toBeLessThan(2);
+  }
+
+  // Tab cycles inside the panel rather than escaping to the board behind it.
+  const stops = await page.locator('#sheet button').count();
+  for (let i = 0; i < stops + 2; i++) {
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => !!document.activeElement.closest('#sheet'))).toBe(true);
+  }
+
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#sheet')).toBeHidden();
+  await expect(page.locator('#btn-more')).toBeFocused();
+});
+
+test('the sheet swallows the game shortcuts while it is up', async ({ page }) => {
+  await page.goto(DEAL);
+  await page.click('#stock');
+  await expect(page.locator('#stat-moves')).toHaveText('1');
+
+  await page.click('#btn-more');
+  // N would deal a new hand behind the panel; while it is up, nothing happens.
+  await page.keyboard.press('n');
+  await page.keyboard.press('u');
+  await expect(page.locator('#stat-moves')).toHaveText('1');
+
+  await page.click('#sheet-veil', { position: { x: 5, y: 5 } });
+  await expect(page.locator('#sheet')).toBeHidden();
+  await page.keyboard.press('u');
+  await expect(page.locator('#stat-moves')).toHaveText('0');
+});
+
+test('the record reports what the player has actually done', async ({ page }) => {
+  await page.goto(DEAL);
+  await page.click('#btn-more');
+  await expect(page.locator('#rec-played')).toHaveText('0');
+  await expect(page.locator('#rec-rate'), 'no games means no rate to quote').toHaveText('—');
+  await expect(page.locator('#rec-best-time')).toHaveText('—');
+  await page.click('#btn-sheet-done');
+
+  await page.click('#stock');
+  await page.click('#btn-more');
+  await expect(page.locator('#rec-played')).toHaveText('1');
+  await expect(page.locator('#rec-won')).toHaveText('0');
+  await expect(page.locator('#rec-rate')).toHaveText('0%');
+});
