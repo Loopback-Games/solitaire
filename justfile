@@ -15,7 +15,7 @@ serve:
 
 # Static checks that need no browser.
 check:
-    node --check js/solitaire.js
+    @for f in js/*.js; do echo "  $f"; node --input-type=module --check < "$f" || exit 1; done
     python3 -c "import json; json.load(open('manifest.webmanifest'))"
     python3 -c "import xml.dom.minidom as m; [m.parse(f) for f in ['assets/favicon.svg','assets/social.svg']]"
     python3 -c "import yaml,glob; [yaml.safe_load(open(f)) for f in glob.glob('.github/**/*.yml', recursive=True)]"
