@@ -431,6 +431,28 @@ body {
   box-shadow: 0 0 0 2px var(--mint), 0 22px 38px -10px #000e;
 }
 
+/* A finger covers the card it is dragging. Riding the run above the touch point
+   keeps it readable, and since the drop is decided by where the card is rather
+   than where the finger is, you aim with what you can see. */
+@media (pointer: coarse) {
+  .card.is-dragging { --lift: calc(var(--card-h) * -.5); }
+}
+
+/* --- landing ------------------------------------------------------------- */
+
+/* The card is already where it belongs by the time this runs. Putting it back
+   under the finger and letting the base transition carry it home turns a
+   teleport into a throw, for one class and two numbers. */
+/* Held still for one frame so the resting position can be measured. */
+.card.is-still { transition: none; }
+
+.card.is-snapping {
+  transform: translate(var(--dx, 0px), var(--dy, 0px))
+             translateY(var(--lift, 0px))
+             rotateY(var(--flip));
+  z-index: 55;
+}
+
 
 /* --- face ---------------------------------------------------------------- */
 

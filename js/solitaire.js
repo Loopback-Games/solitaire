@@ -8,6 +8,7 @@
  */
 import { read, write, saveGame, clearGame } from './store.js';
 import { moves, dead } from './hint.js';
+import { enable, sfx } from './sfx.js';
 
 /* ------------------------------------------------------------- deck --- */
 
@@ -60,6 +61,7 @@ const el = {
 };
 
 const segs = [...document.querySelectorAll('[data-draw]')];
+const soundSegs = [...document.querySelectorAll('[data-sound]')];
 const dailyView = {
   state:  $('#daily-state'),
   streak: $('#daily-streak'),
@@ -126,6 +128,7 @@ let dealSeed = 0, counted = false, isDaily = false;
 let hint = null, hintAt = 0, hintTimer = null, stuckShown = false;
 
 let drawN = read().prefs.drawN === 3 ? 3 : 1;
+let sound = read().prefs.sound === true;
 
 function fresh(seed = newSeed(), daily = false) {
   // Restarting today's puzzle is the same as walking every move back, so it
@@ -449,7 +452,7 @@ function move(from, at, to) {
 function reveal(k) {
   if (!TABLEAU.includes(k)) return;
   const t = top(k);
-  if (t !== undefined && !s.up[t]) s.up[t] = true;
+  if (t !== undefined && !s.up[t]) { s.up[t] = true; sfx.flip(); }
 }
 
 function deal() {
@@ -461,11 +464,13 @@ function deal() {
       s.up[id] = true;
       s.waste.push(id);
     }
+    sfx.deal();
     say(`Dealt ${Math.min(drawN, s.waste.length)}.`);
   } else if (s.waste.length) {
     s.stock = s.waste.reverse();
     s.waste = [];
     s.stock.forEach((id) => { s.up[id] = false; });
+    sfx.deal();
     say('Stock refilled.');
   } else {
     history.pop();
@@ -500,7 +505,9 @@ function place(target) {
   if (!canDrop(target)) return false;
   const run = move(sel.from, sel.at, target);
   sel = null;
-  render({ home: FOUNDS.includes(target) ? target : null });
+  const home = FOUNDS.includes(target);
+  render({ home: home ? target : null });
+  if (home) sfx.home(); else sfx.place();
   say(`${name(run[0])} moved.`);
   finish();
   checkStuck();
@@ -515,6 +522,7 @@ function sendHome(key, id) {
   move(key, s[key].length - 1, target);
   sel = null;
   render({ home: target });
+  sfx.home();
   say(`${name(id)} home.`);
   finish();
   checkStuck();
@@ -597,6 +605,7 @@ function finish() {
 
   el.wonTime.textContent = clock(secs);
   el.wonMoves.textContent = s.moves;
+  sfx.win();
   document.body.classList.add('is-won');
   cascade();
 }
@@ -889,6 +898,22 @@ function paintDraw() {
   segs.forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.draw) === drawN)));
 }
 
+function paintSound() {
+  soundSegs.forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.sound === 'on') === sound)));
+}
+
+function setSound(want) {
+  if (want === sound) return;
+  sound = want;
+  paintSound();
+  enable(sound);
+  write({ prefs: { ...read().prefs, sound } });
+  // The click that turned it on is the gesture the audio context needs, so the
+  // confirmation is also the proof that it works.
+  if (sound) sfx.place();
+  say(sound ? 'Sound on.' : 'Sound off.');
+}
+
 function setDraw(n) {
   const next = n === 3 ? 3 : 1;
   if (next === drawN) return;
@@ -906,6 +931,7 @@ el.copy.addEventListener('click', copyLink);
 el.replay.addEventListener('click', () => { hideSheet(); fresh(dealSeed, isDaily); say('Same hand again.'); });
 el.daily.addEventListener('click', () => { hideSheet(); fresh(dailySeed(today()), true); say('Today\u2019s deal.'); });
 segs.forEach((b) => b.addEventListener('click', () => setDraw(Number(b.dataset.draw))));
+soundSegs.forEach((b) => b.addEventListener('click', () => setSound(b.dataset.sound === 'on')));
 
 // The sheet is modal, so focus stays inside it until it is dismissed.
 el.sheet.addEventListener('keydown', (ev) => {
@@ -969,6 +995,7 @@ const endDrag = (dropped) => {
   // Read where the card actually is before putting it back down — clearing
   // the transform first would hit-test the place it started from.
   const target = d.live && dropped ? landing(d.run[0]) : null;
+  const from = d.live ? d.run.map((n) => n.getBoundingClientRect()) : null;
 
   d.run.forEach((n) => {
     n.classList.remove('is-dragging');
@@ -979,9 +1006,53 @@ const endDrag = (dropped) => {
   if (!d.live) return;
   // A click follows this pointerup, and the drop has already been handled.
   swallowClick = true;
-  if (target) place(target);
-  else { sel = null; render(); }
+  if (target) {
+    place(target);
+  } else {
+    sel = null;
+    render();
+    sfx.nope();
+  }
+  snap(d.run, from);
 };
+
+/* Cards land rather than teleport: the run has already been re-parented, so it
+ * is put back where the finger let go and the transition on .card carries it
+ * home. Two numbers per card and one class; the movement itself is CSS. */
+function snap(nodes, from) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  // Measure the resting position with transitions frozen. The drag transform is
+  // already unwinding by now, and a rect read mid-flight is a frame of that
+  // rather than where the card actually belongs.
+  nodes.forEach((n) => n.classList.add('is-still'));
+  const rest = nodes.map((n) => n.getBoundingClientRect());
+
+  const moved = [];
+  nodes.forEach((node, i) => {
+    const dx = from[i].left - rest[i].left;
+    const dy = from[i].top - rest[i].top;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+    node.style.setProperty('--dx', `${dx}px`);
+    node.style.setProperty('--dy', `${dy}px`);
+    node.classList.add('is-snapping');
+    moved.push(node);
+  });
+
+  // Commit the offset, then lift the freeze and clear the offset together so
+  // the transition has somewhere to run from.
+  void nodes[0].offsetWidth;
+  nodes.forEach((n) => n.classList.remove('is-still'));
+  moved.forEach((node) => {
+    node.style.setProperty('--dx', '0px');
+    node.style.setProperty('--dy', '0px');
+  });
+  setTimeout(() => moved.forEach((node) => {
+    node.classList.remove('is-snapping');
+    node.style.removeProperty('--dx');
+    node.style.removeProperty('--dy');
+  }), 380);
+}
 
 addEventListener('pointerup', () => endDrag(true));
 addEventListener('pointercancel', () => endDrag(false));
@@ -1101,6 +1172,8 @@ document.addEventListener('visibilitychange', () => {
 /* -------------------------------------------------------------- boot --- */
 
 paintDraw();
+paintSound();
+enable(sound);
 el.wins.textContent = read().stats.won;
 
 const query = new URLSearchParams(location.search);
