@@ -6,6 +6,7 @@
  * fan spacing, flips and animation stay in CSS where they can respond to the
  * viewport without asking JavaScript.
  */
+import { read, write, saveGame, clearGame } from './store.js';
 
 /* ------------------------------------------------------------- deck --- */
 
@@ -23,19 +24,6 @@ const TABLEAU = ['t0', 't1', 't2', 't3', 't4', 't5', 't6'];
 const FOUNDS  = ['f0', 'f1', 'f2', 'f3'];
 const KEYS    = ['stock', 'waste', ...FOUNDS, ...TABLEAU];
 
-/* ------------------------------------------------------------- store --- */
-
-const STORE = 'lbg.solitaire.v1';
-
-const load = () => {
-  try { return JSON.parse(localStorage.getItem(STORE)) || {}; }
-  catch { return {}; }
-};
-const save = (patch) => {
-  try { localStorage.setItem(STORE, JSON.stringify({ ...load(), ...patch })); }
-  catch { /* private browsing — the game still plays, it just forgets */ }
-};
-
 /* ---------------------------------------------------------------- dom --- */
 
 const $ = (sel) => document.querySelector(sel);
@@ -50,6 +38,7 @@ const el = {
   wins:      $('#stat-wins'),
   count:     $('#stock-count'),
   undo:      $('#btn-undo'),
+  redo:      $('#btn-redo'),
   draw:      $('#btn-draw'),
   drawN:     $('#draw-n'),
   auto:      $('#btn-auto'),
@@ -99,15 +88,20 @@ const name = (id) => `${RANKS[rankOf(id)]} of ${['spades','hearts','diamonds','c
 
 /* -------------------------------------------------------------- state --- */
 
-let s, history, sel, timer, autoTimer, startedAt, elapsed;
+let s, history, redo, sel, timer, autoTimer, startedAt, elapsed;
 let drag = null, swallowClick = false, curtainTimer = null;
 
-const prefs = load();
-let drawN = prefs.drawN === 3 ? 3 : 1;
+// The number that produced the hand on the table, and whether that hand has
+// been counted as played — a resumed game must not be counted a second time.
+let dealSeed = 0, counted = false;
 
-function fresh() {
+let drawN = read().prefs.drawN === 3 ? 3 : 1;
+
+function fresh(seed = newSeed()) {
+  abandon();
+  dealSeed = seed >>> 0;
   const deck = [...Array(52).keys()];
-  const roll = seeded();
+  const roll = mulberry32(dealSeed);
   for (let i = 51; i > 0; i--) {
     const j = roll(i + 1);
     [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -126,10 +120,13 @@ function fresh() {
   s.stock = deck;
 
   history = [];
+  redo = [];
   sel = null;
   drag = null;
   elapsed = 0;
   startedAt = null;
+  counted = false;
+  el.time.textContent = clock(0);
   stopTimer();
   stopAuto();
   clearTimeout(curtainTimer);
@@ -142,15 +139,16 @@ function fresh() {
   render({ deal: true });
 }
 
-/* Deals are random unless the URL carries ?deal=<number>, which replays the
- * same shuffle every time. Handy for sharing a hand, and it is what the test
- * suite pins itself to. */
-function seeded() {
-  const asked = new URLSearchParams(location.search).get('deal');
-  const n = Number.parseInt(asked, 10);
-  if (!Number.isFinite(n)) return draws;
-
-  // mulberry32 — small, fast, and good enough to shuffle a deck with.
+/* Every hand has a number, so every hand can be replayed, shared or resumed.
+ * ?deal=<n> asks for one by name; without it the number comes from the system
+ * random source and is kept alongside the board.
+ *
+ * The trade: seeding a 32-bit generator puts about four billion hands within
+ * reach rather than all 52!, which is no constraint whatsoever on a card table
+ * and is the price of a deal you can name.
+ *
+ * mulberry32 — small, fast, and good enough to shuffle a deck with. */
+function mulberry32(n) {
   let a = (n >>> 0) + 0x6D2B79F5;
   return (max) => {
     a |= 0; a = (a + 0x6D2B79F5) | 0;
@@ -160,17 +158,11 @@ function seeded() {
   };
 }
 
-function draws(n) {
+function newSeed() {
   if (window.crypto && crypto.getRandomValues) {
-    // Rejection sampling, so the shuffle stays uniform rather than biased
-    // toward the low end of the range.
-    const limit = Math.floor(0x100000000 / n) * n;
-    const buf = new Uint32Array(1);
-    let v;
-    do { crypto.getRandomValues(buf); v = buf[0]; } while (v >= limit);
-    return v % n;
+    return crypto.getRandomValues(new Uint32Array(1))[0];
   }
-  return Math.floor(Math.random() * n);
+  return Math.floor(Math.random() * 0x100000000);
 }
 
 const snapshot = () => ({
@@ -182,6 +174,18 @@ const snapshot = () => ({
 function push() {
   history.push(snapshot());
   if (history.length > 200) history.shift();
+  // Playing on abandons whatever branch you had walked back from.
+  redo.length = 0;
+}
+
+// Restoring a snapshot is not itself a move, so neither stack is disturbed
+// beyond the one that moves between them.
+function apply(shot) {
+  s.up = shot.up;
+  s.moves = shot.moves;
+  KEYS.forEach((k, i) => { s[k] = shot.piles[i]; });
+  sel = null;
+  render();
 }
 
 function undo() {
@@ -190,12 +194,111 @@ function undo() {
   const prev = history.pop();
   if (!prev) return;
   stopAuto();
-  s.up = prev.up;
-  s.moves = prev.moves;
-  KEYS.forEach((k, i) => { s[k] = prev.piles[i]; });
-  sel = null;
-  render();
+  redo.push(snapshot());
+  apply(prev);
   say('Move undone.');
+}
+
+function redoMove() {
+  if (document.body.classList.contains('is-won')) return;
+  const next = redo.pop();
+  if (!next) return;
+  stopAuto();
+  history.push(snapshot());
+  apply(next);
+  say('Move redone.');
+}
+
+/* --------------------------------------------------------- continuity --- */
+
+const liveSecs = () => (startedAt ? Math.floor((Date.now() - startedAt) / 1000) : elapsed);
+
+// Both walk-back stacks are capped before they reach the disk. Fifty snapshots
+// is far more than anyone walks back, and keeps the payload near 25KB.
+const CAP = 50;
+
+function persist() {
+  if (!s || document.body.classList.contains('is-won')) return;
+  saveGame({
+    seed: dealSeed,
+    drawN,
+    counted,
+    elapsed: liveSecs(),
+    current: snapshot(),
+    history: history.slice(-CAP),
+    redo: redo.slice(-CAP),
+  });
+}
+
+function restore(g) {
+  drawN = g.drawN === 3 ? 3 : 1;
+  dealSeed = g.seed >>> 0;
+
+  s = { up: g.current.up, moves: g.current.moves };
+  KEYS.forEach((k, i) => { s[k] = g.current.piles[i]; });
+  history = Array.isArray(g.history) ? g.history : [];
+  redo = Array.isArray(g.redo) ? g.redo : [];
+  elapsed = Number(g.elapsed) || 0;
+  counted = !!g.counted;
+
+  sel = null;
+  drag = null;
+  startedAt = null;
+  stopTimer();
+  stopAuto();
+  clearTimeout(curtainTimer);
+  cards.forEach((c) => {
+    c.classList.remove('is-falling', 'is-dealing', 'is-dragging');
+    c.removeAttribute('style');
+  });
+  document.body.classList.remove('is-won');
+  el.curtain.hidden = true;
+
+  el.time.textContent = clock(elapsed);
+  render();
+  // The clock picks up again only for a hand that had already started.
+  if (counted) startTimer();
+}
+
+/* The payload is our own, but it can still be truncated, hand-edited, or left
+ * behind by a build that wrote a different shape. Anything short of a complete
+ * fifty-two card board is discarded in favour of a fresh deal. */
+function intact(g) {
+  if (!g || !g.current || !Number.isFinite(g.seed)) return false;
+  if (!Array.isArray(g.current.piles) || g.current.piles.length !== KEYS.length) return false;
+  if (!Array.isArray(g.current.up) || g.current.up.length !== 52) return false;
+
+  const seen = new Set();
+  for (const pile of g.current.piles) {
+    if (!Array.isArray(pile)) return false;
+    for (const id of pile) {
+      if (!Number.isInteger(id) || id < 0 || id > 51 || seen.has(id)) return false;
+      seen.add(id);
+    }
+  }
+  if (seen.size !== 52) return false;
+
+  // A finished hand is not worth coming back to.
+  return FOUNDS.reduce((n, k) => n + g.current.piles[KEYS.indexOf(k)].length, 0) < 52;
+}
+
+/* ------------------------------------------------------------- record --- */
+
+/* A hand counts as played the moment the first card moves, not when it is
+ * dealt — idly opening the tab never dents the record. */
+function begin() {
+  if (!startedAt) startTimer();
+  if (counted) return;
+  counted = true;
+  const stats = read().stats;
+  write({ stats: { ...stats, played: stats.played + 1 } });
+}
+
+/* Walking away from a started hand breaks the streak. It was already counted
+ * as played, so a loss needs no column of its own: it is played minus won. */
+function abandon() {
+  if (!counted || won()) return;
+  write({ stats: { ...read().stats, streak: 0 } });
 }
 
 /* -------------------------------------------------------------- rules --- */
@@ -240,7 +343,7 @@ function move(from, at, to) {
   s[to].push(...run);
   reveal(from);
   s.moves++;
-  if (!startedAt) startTimer();
+  begin();
   return run;
 }
 
@@ -252,7 +355,7 @@ function reveal(k) {
 }
 
 function deal() {
-  if (!startedAt) startTimer();
+  begin();
   push();
   if (s.stock.length) {
     for (let i = 0; i < drawN && s.stock.length; i++) {
@@ -367,14 +470,20 @@ function finish() {
   stopAuto();
   sel = null;
   const secs = elapsed;
-  const prev = load();
-  const wins = (prev.wins || 0) + 1;
-  const best = prev.best && prev.best <= secs ? prev.best : secs;
-  save({ wins, best });
-  el.wins.textContent = wins;
+  const st = { ...read().stats };
+  st.won++;
+  st.streak++;
+  if (st.streak > st.bestStreak) st.bestStreak = st.streak;
+  if (!st.bestTime || secs < st.bestTime) st.bestTime = secs;
+  if (!st.bestMoves || s.moves < st.bestMoves) st.bestMoves = s.moves;
+  write({ stats: st });
+  // The hand is over; there is nothing left to come back to.
+  clearGame();
+
+  el.wins.textContent = st.won;
   el.wonTime.textContent = clock(secs);
   el.wonMoves.textContent = s.moves;
-  el.wonBest.textContent = clock(best);
+  el.wonBest.textContent = clock(st.bestTime);
   say('You won.');
   document.body.classList.add('is-won');
   cascade();
@@ -511,7 +620,10 @@ function render(opts = {}) {
   piles.stock.classList.toggle('can-recycle', !s.stock.length && s.waste.length > 0);
   el.moves.textContent = s.moves;
   el.undo.disabled = history.length === 0;
+  el.redo.disabled = redo.length === 0;
   el.auto.hidden = !(solved() && !won());
+
+  persist();
 }
 
 // Which cards respond to a click at all — the rest let the pile take it.
@@ -662,21 +774,35 @@ document.addEventListener('pointerdown', () => {
 $('#btn-new').addEventListener('click', () => { fresh(); say('New deal.'); });
 $('#btn-again').addEventListener('click', () => { fresh(); say('New deal.'); });
 el.undo.addEventListener('click', undo);
+el.redo.addEventListener('click', redoMove);
 el.auto.addEventListener('click', startAuto);
 
 el.draw.addEventListener('click', () => {
   drawN = drawN === 1 ? 3 : 1;
   el.drawN.textContent = drawN;
   el.draw.setAttribute('aria-pressed', String(drawN === 3));
-  save({ drawN });
+  write({ prefs: { ...read().prefs, drawN } });
+  persist();
   say(`Drawing ${drawN} at a time.`);
 });
 
 document.addEventListener('keydown', (ev) => {
-  if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
   const k = ev.key.toLowerCase();
+
+  // Ctrl/Cmd+Z is what a player's hands already know; its shifted form is redo
+  // most places, and Windows also expects Ctrl+Y.
+  if (ev.metaKey || ev.ctrlKey) {
+    if (k === 'z') (ev.shiftKey ? redoMove : undo)();
+    else if (k === 'y') redoMove();
+    else return;
+    ev.preventDefault();
+    return;
+  }
+  if (ev.altKey) return;
+
   if (k === 'escape' && sel) { sel = null; render(); }
   else if (k === 'u') undo();
+  else if (k === 'r') redoMove();
   else if (k === 'n') fresh();
   else if (k === 'd') el.draw.click();
   else return;
@@ -693,5 +819,13 @@ document.addEventListener('visibilitychange', () => {
 
 el.drawN.textContent = drawN;
 el.draw.setAttribute('aria-pressed', String(drawN === 3));
-el.wins.textContent = prefs.wins || 0;
-fresh();
+el.wins.textContent = read().stats.won;
+
+const asked = Number.parseInt(new URLSearchParams(location.search).get('deal'), 10);
+const wanted = Number.isFinite(asked) ? asked >>> 0 : null;
+const saved = read().game;
+
+// The hand you left is the hand you come back to, unless the URL names a
+// different deal — following a shared link should deal that link's hand.
+if (saved && intact(saved) && (wanted === null || saved.seed === wanted)) restore(saved);
+else fresh(wanted === null ? newSeed() : wanted);

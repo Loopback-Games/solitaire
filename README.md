@@ -22,10 +22,10 @@ Even the cascade at the end works this way: the whole bouncing arc is one
 `@keyframes` rule, and JavaScript hands each card three numbers — how far it is
 above the table, which way it is heading, and when to go.
 
-That is roughly 640 lines of vanilla JavaScript in one file, with no framework,
-no build step, and no runtime dependencies. Klondike needs a shuffle, move
-validation and win detection, so zero was never on the table — but nothing in
-here does a job CSS could do instead.
+That is under a thousand lines of vanilla JavaScript across a handful of native
+ES modules, with no framework, no build step, and no runtime dependencies.
+Klondike needs a shuffle, move validation and win detection, so zero was never
+on the table — but nothing in here does a job CSS could do instead.
 
 The only external request is the Google Fonts stylesheet.
 
@@ -43,16 +43,20 @@ can legally go to: mint is the card in your hand, ochre is where it can land.
 | Send it to a foundation | Double-click it |
 | Deal | Click the stock; click again when empty to fold the waste back in |
 | Put it back down | Click it again, or press `Esc` |
+| Change your mind | **Undo** and **Redo** walk the hand back and forward |
 | Finish a solved game | **Finish it** appears once no cards are face down |
 
 Win and all fifty-two pour off the foundations, bounce off the table and sail
 out over the edge. Click to skip to the score.
 
 Keyboard: `Tab` to a card, `Enter` to pick it up, `Tab` to a highlighted pile,
-`Enter` to drop. `U` undo, `N` new deal, `D` toggle draw count, `Esc` deselect.
+`Enter` to drop. `U` undo, `R` redo, `N` new deal, `D` toggle draw count, `Esc`
+deselect. `Ctrl`/`Cmd`+`Z` works too, shifted for redo.
 
-Add `?deal=42` to the URL to replay a specific shuffle. Same number, same hand,
-every time — useful for sharing a deal or reporting a bug.
+Close the tab mid-hand and the hand is still there when you come back, walk-back
+stacks and all. Every deal has a number: add `?deal=42` to the URL to play a
+specific shuffle. Same number, same hand, every time — useful for sharing a deal
+or reporting a bug.
 
 ## Rules
 
