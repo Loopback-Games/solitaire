@@ -44,6 +44,11 @@ const el = {
   sheet:     $('#sheet'),
   veil:      $('#sheet-veil'),
   done:      $('#btn-sheet-done'),
+  copy:      $('#btn-copy'),
+  replay:    $('#btn-replay'),
+  daily:     $('#btn-daily'),
+  dealNum:   $('#deal-num'),
+  bestLabel: $('#won-best-label'),
   curtain:   $('#curtain'),
   wonTime:   $('#won-time'),
   wonMoves:  $('#won-moves'),
@@ -52,6 +57,12 @@ const el = {
 };
 
 const segs = [...document.querySelectorAll('[data-draw]')];
+const dailyView = {
+  state:  $('#daily-state'),
+  streak: $('#daily-streak'),
+  best:   $('#daily-best'),
+};
+
 const record = {
   played:     $('#rec-played'),
   won:        $('#rec-won'),
@@ -106,12 +117,16 @@ let drag = null, swallowClick = false, curtainTimer = null;
 
 // The number that produced the hand on the table, and whether that hand has
 // been counted as played — a resumed game must not be counted a second time.
-let dealSeed = 0, counted = false;
+let dealSeed = 0, counted = false, isDaily = false;
 
 let drawN = read().prefs.drawN === 3 ? 3 : 1;
 
-function fresh(seed = newSeed()) {
-  abandon();
+function fresh(seed = newSeed(), daily = false) {
+  // Restarting today's puzzle is the same as walking every move back, so it
+  // does not spend the day. Anything else retires the hand on the table.
+  const sameDaily = daily && isDaily && (seed >>> 0) === dealSeed;
+  if (!sameDaily) abandon();
+  isDaily = daily;
   dealSeed = seed >>> 0;
   const deck = [...Array(52).keys()];
   const roll = mulberry32(dealSeed);
@@ -234,6 +249,7 @@ function persist() {
   if (!s || document.body.classList.contains('is-won')) return;
   saveGame({
     seed: dealSeed,
+    isDaily,
     drawN,
     counted,
     elapsed: liveSecs(),
@@ -246,6 +262,7 @@ function persist() {
 function restore(g) {
   drawN = g.drawN === 3 ? 3 : 1;
   dealSeed = g.seed >>> 0;
+  isDaily = !!g.isDaily;
 
   s = { up: g.current.up, moves: g.current.moves };
   KEYS.forEach((k, i) => { s[k] = g.current.piles[i]; });
@@ -296,6 +313,58 @@ function intact(g) {
   return FOUNDS.reduce((n, k) => n + g.current.piles[KEYS.indexOf(k)].length, 0) < 52;
 }
 
+/* -------------------------------------------------------------- daily --- */
+
+/* Today's puzzle is one hand, fixed by the date, that everyone gets. You may
+ * walk it back as far as you like, but you get one shuffle: a streak you can
+ * retry into is not a streak. */
+
+const stamp = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Local midnight, not UTC — the puzzle should turn over on the player's day.
+const today = () => stamp(new Date());
+
+function dayBefore(day) {
+  const t = new Date(`${day}T00:00:00`);
+  t.setDate(t.getDate() - 1);
+  return stamp(t);
+}
+
+const dailySeed = (day) => Number(day.replaceAll('-', ''));
+
+/* Rolling onto a new day carries the streak only from a day that was actually
+ * won, and only from the day immediately before — a day skipped and a day lost
+ * both end the run. */
+function rollDaily() {
+  const day = today();
+  const prev = read().daily;
+  if (prev && prev.day === day) return prev;
+
+  const carried = !!prev && prev.result === 'won' && prev.day === dayBefore(day);
+  const next = {
+    day,
+    result: 'playing',
+    streak: carried ? prev.streak : 0,
+    bestStreak: prev ? prev.bestStreak : 0,
+  };
+  write({ daily: next });
+  return next;
+}
+
+// Only a day still in play can be settled; replaying a finished day changes
+// nothing either way.
+function settleDaily(result) {
+  const d = read().daily;
+  if (!d || d.day !== today() || d.result !== 'playing') return;
+
+  if (result === 'won') {
+    const streak = d.streak + 1;
+    write({ daily: { ...d, result: 'won', streak, bestStreak: Math.max(streak, d.bestStreak) } });
+  } else {
+    write({ daily: { ...d, result: 'lost', streak: 0 } });
+  }
+}
+
 /* ------------------------------------------------------------- record --- */
 
 /* A hand counts as played the moment the first card moves, not when it is
@@ -304,6 +373,8 @@ function begin() {
   if (!startedAt) startTimer();
   if (counted) return;
   counted = true;
+  // The daily keeps its own record and never touches the freeplay one.
+  if (isDaily) return;
   const stats = read().stats;
   write({ stats: { ...stats, played: stats.played + 1 } });
 }
@@ -312,6 +383,7 @@ function begin() {
  * as played, so a loss needs no column of its own: it is played minus won. */
 function abandon() {
   if (!counted || won()) return;
+  if (isDaily) { settleDaily('lost'); return; }
   write({ stats: { ...read().stats, streak: 0 } });
 }
 
@@ -484,21 +556,32 @@ function finish() {
   stopAuto();
   sel = null;
   const secs = elapsed;
-  const st = { ...read().stats };
-  st.won++;
-  st.streak++;
-  if (st.streak > st.bestStreak) st.bestStreak = st.streak;
-  if (!st.bestTime || secs < st.bestTime) st.bestTime = secs;
-  if (!st.bestMoves || s.moves < st.bestMoves) st.bestMoves = s.moves;
-  write({ stats: st });
+
   // The hand is over; there is nothing left to come back to.
   clearGame();
 
-  el.wins.textContent = st.won;
+  if (isDaily) {
+    settleDaily('won');
+    // A daily win is measured in days, not in seconds against other hands.
+    el.bestLabel.textContent = 'Streak';
+    el.wonBest.textContent = read().daily.streak;
+    say('You won today\u2019s deal.');
+  } else {
+    const st = { ...read().stats };
+    st.won++;
+    st.streak++;
+    if (st.streak > st.bestStreak) st.bestStreak = st.streak;
+    if (!st.bestTime || secs < st.bestTime) st.bestTime = secs;
+    if (!st.bestMoves || s.moves < st.bestMoves) st.bestMoves = s.moves;
+    write({ stats: st });
+    el.bestLabel.textContent = 'Best';
+    el.wins.textContent = st.won;
+    el.wonBest.textContent = clock(st.bestTime);
+    say('You won.');
+  }
+
   el.wonTime.textContent = clock(secs);
   el.wonMoves.textContent = s.moves;
-  el.wonBest.textContent = clock(st.bestTime);
-  say('You won.');
   document.body.classList.add('is-won');
   cascade();
 }
@@ -654,6 +737,8 @@ const sheetOpen = () => !el.sheet.hidden;
 
 function showSheet() {
   if (sheetOpen()) return;
+  paintDeal();
+  paintDaily();
   paintRecord();
   el.veil.hidden = false;
   el.sheet.hidden = false;
@@ -682,6 +767,53 @@ function paintRecord() {
   record.bestMoves.textContent = st.bestMoves || '—';
 }
 
+function paintDeal() {
+  el.dealNum.textContent = dealSeed;
+  el.copy.textContent = 'Copy link';
+}
+
+const DAILY_STATE = { playing: 'Open', won: 'Won', lost: 'Lost' };
+
+function paintDaily() {
+  const d = rollDaily();
+  dailyView.state.textContent = DAILY_STATE[d.result] || 'Open';
+  dailyView.streak.textContent = d.streak;
+  dailyView.best.textContent = d.bestStreak;
+  el.daily.textContent = d.result === 'playing' ? 'Play today\u2019s deal' : 'Replay today\u2019s deal';
+}
+
+const shareLink = () => `${location.origin}${location.pathname}?deal=${dealSeed}`;
+
+/* The async clipboard needs a secure context and a permission that can be
+ * refused. The hidden-field trick needs neither, which is the whole reason it
+ * is still worth carrying despite execCommand being deprecated. */
+function oldCopy(text) {
+  const field = document.createElement('textarea');
+  field.value = text;
+  field.setAttribute('readonly', '');
+  field.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+  document.body.append(field);
+  field.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { ok = false; }
+  field.remove();
+  return ok;
+}
+
+async function copyLink() {
+  const url = shareLink();
+  let ok = false;
+  try {
+    await navigator.clipboard.writeText(url);
+    ok = true;
+  } catch {
+    ok = oldCopy(url);
+  }
+  el.copy.textContent = ok ? 'Copied' : 'Copy failed';
+  say(ok ? 'Link copied.' : 'Could not reach the clipboard.');
+  setTimeout(() => { el.copy.textContent = 'Copy link'; }, 1600);
+}
+
 function paintDraw() {
   segs.forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.draw) === drawN)));
 }
@@ -699,6 +831,9 @@ function setDraw(n) {
 el.more.addEventListener('click', showSheet);
 el.done.addEventListener('click', hideSheet);
 el.veil.addEventListener('click', hideSheet);
+el.copy.addEventListener('click', copyLink);
+el.replay.addEventListener('click', () => { hideSheet(); fresh(dealSeed, isDaily); say('Same hand again.'); });
+el.daily.addEventListener('click', () => { hideSheet(); fresh(dailySeed(today()), true); say('Today\u2019s deal.'); });
 segs.forEach((b) => b.addEventListener('click', () => setDraw(Number(b.dataset.draw))));
 
 // The sheet is modal, so focus stays inside it until it is dismissed.
@@ -851,6 +986,7 @@ document.addEventListener('pointerdown', () => {
 
 $('#btn-new').addEventListener('click', () => { fresh(); say('New deal.'); });
 $('#btn-again').addEventListener('click', () => { fresh(); say('New deal.'); });
+$('#btn-won-replay').addEventListener('click', () => { fresh(dealSeed, isDaily); say('Same hand again.'); });
 el.undo.addEventListener('click', undo);
 el.redo.addEventListener('click', redoMove);
 el.auto.addEventListener('click', startAuto);
@@ -891,11 +1027,23 @@ document.addEventListener('visibilitychange', () => {
 paintDraw();
 el.wins.textContent = read().stats.won;
 
-const asked = Number.parseInt(new URLSearchParams(location.search).get('deal'), 10);
+const query = new URLSearchParams(location.search);
+const asked = Number.parseInt(query.get('deal'), 10);
 const wanted = Number.isFinite(asked) ? asked >>> 0 : null;
 const saved = read().game;
 
+// Settle the calendar before anything reads it, so a day skipped entirely ends
+// the run whether or not the player opens the sheet.
+rollDaily();
+
 // The hand you left is the hand you come back to, unless the URL names a
 // different deal — following a shared link should deal that link's hand.
-if (saved && intact(saved) && (wanted === null || saved.seed === wanted)) restore(saved);
-else fresh(wanted === null ? newSeed() : wanted);
+if (query.has('daily')) {
+  const seed = dailySeed(today());
+  if (saved && intact(saved) && saved.isDaily && saved.seed === seed) restore(saved);
+  else fresh(seed, true);
+} else if (saved && intact(saved) && (wanted === null || saved.seed === wanted)) {
+  restore(saved);
+} else {
+  fresh(wanted === null ? newSeed() : wanted);
+}

@@ -105,6 +105,24 @@
     </div>
   </div>
 
+  <h3 class="sheet-title">Deal</h3>
+  <div class="sheet-row">
+    <span class="sheet-label">Number</span>
+    <span class="sheet-value" id="deal-num">—</span>
+  </div>
+  <div class="sheet-actions">
+    <button type="button" class="ctl" id="btn-copy">Copy link</button>
+    <button type="button" class="ctl" id="btn-replay">Replay it</button>
+  </div>
+
+  <h3 class="sheet-title">Today's deal</h3>
+  <dl class="sheet-stats">
+    <div><dt>State</dt><dd id="daily-state">Open</dd></div>
+    <div><dt>Streak</dt><dd id="daily-streak">0</dd></div>
+    <div><dt>Best run</dt><dd id="daily-best">0</dd></div>
+  </dl>
+  <button type="button" class="ctl sheet-wide" id="btn-daily">Play today's deal</button>
+
   <h3 class="sheet-title">Record</h3>
   <dl class="sheet-stats">
     <div><dt>Played</dt><dd id="rec-played">0</dd></div>
@@ -128,9 +146,12 @@
     <dl class="won-stats">
       <div><dt>Time</dt><dd id="won-time">0:00</dd></div>
       <div><dt>Moves</dt><dd id="won-moves">0</dd></div>
-      <div><dt>Best</dt><dd id="won-best">—</dd></div>
+      <div><dt id="won-best-label">Best</dt><dd id="won-best">—</dd></div>
     </dl>
-    <button type="button" class="ctl ctl-go" id="btn-again">Deal again</button>
+    <div class="won-actions">
+      <button type="button" class="ctl ctl-go" id="btn-again">Deal again</button>
+      <button type="button" class="ctl" id="btn-won-replay">Replay this hand</button>
+    </div>
   </div>
 </div>
 

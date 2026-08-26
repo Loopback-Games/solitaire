@@ -866,6 +866,23 @@ body.is-won .pile { pointer-events: none; }
   font-variant-numeric: tabular-nums;
 }
 
+.sheet-value {
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--on-dark);
+}
+
+/* Two actions side by side while they fit, stacked when they do not. */
+.sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: .7rem;
+}
+.sheet-actions .ctl { flex: 1 1 8rem; }
+
+.sheet-wide { width: 100%; margin-top: .9rem; }
 .sheet-done { width: 100%; margin-top: 1.6rem; }
 
 /* ------------------------------------------------------------- win state -- */
@@ -925,6 +942,12 @@ body.is-won .pile { pointer-events: none; }
   font-size: clamp(1.3rem, 5.5vw, 1.7rem);
   font-weight: 700;
   letter-spacing: -.02em;
+}
+
+.won-actions {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
 }
 
 .won-stats {
