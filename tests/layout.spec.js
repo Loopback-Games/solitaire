@@ -58,10 +58,12 @@ test('cards carry names and face-down cards stay out of the tab order', async ({
   await expect(page.locator('[data-pile="t6"] .card').last()).toHaveAttribute('aria-label', '2 of spades');
   await expect(page.locator('[data-pile="t6"] .card').first()).toHaveAttribute('aria-label', 'Face-down card');
 
-  const reachable = await page.evaluate(() =>
-    [...document.querySelectorAll('.card')].filter((c) => c.tabIndex === 0).length);
-  // Only the seven exposed cards can be picked up on the opening deal.
-  expect(reachable).toBe(7);
+  // Tabbing through fifty-two cards is reachable and unusable, so the board
+  // puts exactly one thing in the tab order and the arrows move it.
+  const inTabOrder = await page.evaluate(() =>
+    [...document.querySelectorAll('#board .card, #board [data-pile]')]
+      .filter((n) => n.tabIndex === 0).length);
+  expect(inTabOrder).toBe(1);
 
   const buried = await page.evaluate(() =>
     [...document.querySelectorAll('.card:not(.is-up)')].every((c) => c.tabIndex === -1));
@@ -292,4 +294,135 @@ test('the record reports what the player has actually done', async ({ page }) =>
   await expect(page.locator('#rec-played')).toHaveText('1');
   await expect(page.locator('#rec-won')).toHaveText('0');
   await expect(page.locator('#rec-rate')).toHaveText('0%');
+});
+
+/* --- arrow navigation ---------------------------------------------------- */
+
+const cursor = (page) => page.evaluate(() => {
+  const on = document.activeElement;
+  const host = on && on.closest ? on.closest('[data-pile]') : null;
+  return {
+    pile: host ? host.dataset.pile : null,
+    card: on && on.classList.contains('card') ? on.getAttribute('aria-label') : null,
+  };
+});
+
+test('the arrows reach every pile on the board', async ({ page }) => {
+  await page.goto(DEAL);
+  await page.locator('#board').focus();
+
+  // Right runs along the tableau and wraps back to where it started.
+  const seen = [];
+  for (let i = 0; i < 7; i++) {
+    await page.keyboard.press('ArrowRight');
+    seen.push((await cursor(page)).pile);
+  }
+  expect(seen).toEqual(['t1', 't2', 't3', 't4', 't5', 't6', 't0']);
+
+  // Up crosses to the stock, and right runs along the row above.
+  await page.keyboard.press('ArrowUp');
+  expect((await cursor(page)).pile).toBe('stock');
+  const top = [];
+  for (let i = 0; i < 5; i++) {
+    await page.keyboard.press('ArrowRight');
+    top.push((await cursor(page)).pile);
+  }
+  expect(top).toEqual(['waste', 'f0', 'f1', 'f2', 'f3']);
+
+  await page.keyboard.press('ArrowDown');
+  expect((await cursor(page)).pile, 'and back down to the column below').toBe('t5');
+});
+
+test('a whole move is possible with the arrows and Enter', async ({ page }) => {
+  await page.goto(DEAL);
+  await page.locator('#board').focus();
+
+  for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight');
+  expect(await cursor(page)).toEqual({ pile: 't6', card: '2 of spades' });
+
+  await page.keyboard.press('Enter');
+  await expect(page.locator('[data-pile="t6"] .card').last()).toHaveClass(/is-picked/);
+
+  await page.keyboard.press('ArrowLeft');
+  expect((await cursor(page)).pile).toBe('t5');
+  await page.keyboard.press('Enter');
+
+  await expect(page.locator('[data-pile="t5"] .card')).toHaveCount(7);
+  await expect(page.locator('#stat-moves')).toHaveText('1');
+  // Focus did not fall on the floor when the card moved out from under it.
+  expect((await cursor(page)).pile).not.toBeNull();
+});
+
+test('up walks the fan before it leaves the column', async ({ page }) => {
+  await page.goto(DEAL);
+  await page.locator('#board').focus();
+
+  // Build a two-card run on t5, so there is a fan to walk.
+  for (let i = 0; i < 6; i++) await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#stat-moves')).toHaveText('1');
+
+  await page.locator('[data-pile="t5"] .card').last().focus();
+  expect((await cursor(page)).card).toBe('2 of spades');
+
+  await page.keyboard.press('ArrowUp');
+  expect(await cursor(page), 'still in the column, one card deeper')
+    .toEqual({ pile: 't5', card: '3 of diamonds' });
+
+  await page.keyboard.press('ArrowUp');
+  expect((await cursor(page)).pile, 'out of fan, so out of the row').toBe('f3');
+
+  await page.keyboard.press('ArrowDown');
+  expect((await cursor(page)).pile).toBe('t5');
+});
+
+test('the stock can be turned without a pointer', async ({ page }) => {
+  await page.goto(DEAL);
+  await page.locator('#board').focus();
+
+  await page.keyboard.press('ArrowUp');
+  expect((await cursor(page)).pile).toBe('stock');
+  await expect(page.locator('#stock')).toHaveAttribute('role', 'button');
+
+  await page.keyboard.press('Enter');
+  await expect(page.locator('[data-pile="waste"] .card')).toHaveCount(1);
+  await expect(page.locator('#stat-moves')).toHaveText('1');
+});
+
+test('only ever one thing on the board is tabbable', async ({ page }) => {
+  await page.goto(DEAL);
+  await page.locator('#board').focus();
+
+  const count = () => page.evaluate(() =>
+    [...document.querySelectorAll('#board .card, #board [data-pile]')]
+      .filter((n) => n.tabIndex === 0).length);
+
+  for (const key of ['ArrowRight', 'ArrowUp', 'ArrowRight', 'Enter', 'ArrowDown', 'ArrowLeft']) {
+    await page.keyboard.press(key);
+    expect(await count(), `after ${key}`).toBe(1);
+  }
+});
+
+test('moving the cursor never shoves the board about', async ({ page }) => {
+  await page.goto(DEAL);
+  await page.locator('#board').focus();
+
+  // The board is sized to fit, so focus must not try to scroll anything into
+  // view — doing so slides the top row up under the header.
+  const drift = () => page.evaluate(() => {
+    const bits = [document.documentElement, document.body,
+                  document.querySelector('.table'), document.querySelector('#board')];
+    return bits.reduce((n, e) => n + e.scrollTop + e.scrollLeft, 0);
+  });
+
+  for (const key of ['ArrowRight', 'ArrowRight', 'ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft']) {
+    await page.keyboard.press(key);
+    expect(await drift(), `after ${key}`).toBe(0);
+  }
+  const stock = await page.locator('#stock').boundingBox();
+  const header = await page.locator('.rail-top').boundingBox();
+  expect(stock.y, 'the stock is still clear of the header')
+    .toBeGreaterThanOrEqual(header.y + header.height - 1);
 });

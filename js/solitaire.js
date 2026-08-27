@@ -9,6 +9,7 @@
 import { read, write, saveGame, clearGame } from './store.js';
 import { moves, dead } from './hint.js';
 import { enable, sfx } from './sfx.js';
+import { mountKeys } from './keys.js';
 
 /* ------------------------------------------------------------- deck --- */
 
@@ -706,7 +707,7 @@ function render(opts = {}) {
 
       const live = movable(k, i);
       node.classList.toggle('is-dead', !live);
-      node.tabIndex = live ? 0 : -1;
+      node.tabIndex = -1;
       node.setAttribute('aria-label', up ? name(id) : 'Face-down card');
       node.classList.toggle('is-picked', !!sel && sel.from === k && i >= sel.at);
       node.classList.toggle('is-hint', !!hint && !hint.deal && hint.from === k && i >= hint.at);
@@ -724,9 +725,15 @@ function render(opts = {}) {
     host.classList.toggle('is-hint-to', !!hint && hint.to === k);
     const target = !!sel && canDrop(k);
     host.classList.toggle('is-target', target);
-    if (target) { host.tabIndex = 0; host.setAttribute('role', 'button'); }
-    else { host.removeAttribute('tabindex'); host.removeAttribute('role'); }
+
+    // Every pile can be reached by the cursor; only a pile that can act on a
+    // press announces itself as something to press. The stock always can.
+    host.tabIndex = -1;
+    if (target || k === 'stock') host.setAttribute('role', 'button');
+    else host.removeAttribute('role');
   }
+
+  keys.refresh();
 
   if (opts.deal) {
     setTimeout(() => cards.forEach((c) => c.classList.remove('is-dealing')), 700);
@@ -756,6 +763,18 @@ function movable(k, i) {
   if (TABLEAU.includes(k)) return liftable(k, i);
   return i === pile.length - 1 && s.up[pile[i]];
 }
+
+/* ------------------------------------------------------------ keyboard --- */
+
+/* Two rows: the stock, the waste and the four foundations above, the seven
+ * columns below. Left and right run along a row, up and down cross between
+ * them — and inside a column, up and down walk the fan first, so you choose how
+ * deep into a run you take hold. */
+const keys = mountKeys({
+  board: el.board,
+  piles,
+  rows: [['stock', 'waste', ...FOUNDS], TABLEAU],
+});
 
 /* --------------------------------------------------------------- hint --- */
 

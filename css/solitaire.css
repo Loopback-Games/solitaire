@@ -219,9 +219,16 @@ body {
   border-color: color-mix(in srgb, var(--mint) 84%, white);
 }
 
+/* The cursor can rest on a pile as well as a card, so a pile needs a ring too.
+   Piles take theirs inside the slot, where an outset ring would sit under the
+   card fanned over the column below. */
 :where(a, button, .card):focus-visible {
   outline: 2px solid var(--mint);
   outline-offset: 2px;
+}
+.pile:focus-visible {
+  outline: 2px solid var(--mint);
+  outline-offset: -2px;
 }
 
 /* ---------------------------------------------------------------- board -- */
