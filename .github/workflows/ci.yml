@@ -33,6 +33,13 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
       options: --shm-size=1g
 
+    # A container job runs as root but is handed HOME=/github/home, a mount
+    # owned by the image's pwuser, and Firefox refuses to start when $HOME
+    # belongs to somebody else. Playwright prints this exact workaround in the
+    # failure. It also puts mise where the container image already expects it.
+    env:
+      HOME: /root
+
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
