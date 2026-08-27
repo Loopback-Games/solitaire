@@ -19,6 +19,12 @@ python = "3.13.15"
 just = "1.55.1"
 actionlint = "1.7.12"
 zizmor = "1.29.0"
+
+# uv is here to serve the pipx backend below, which has no packaged
+# binary to fetch. Without it a clean machine fails at "pipx is required
+# to install pipx:yamllint but was not found" — which is exactly what the
+# container caught that a laptop with uv already on it never would.
+uv = "0.12.6"
 "pipx:yamllint" = "1.38.0"
 gitleaks = "8.30.1"
 
