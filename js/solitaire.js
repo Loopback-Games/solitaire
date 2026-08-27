@@ -118,7 +118,10 @@ const name = (id) => `${RANKS[rankOf(id)]} of ${['spades','hearts','diamonds','c
 
 /* -------------------------------------------------------------- state --- */
 
-let s, history, redo, sel, timer, autoTimer, startedAt, elapsed;
+// `undos`, not `history`: the browser's own history lives at that name, and a
+// module-level binding that shadows it turns window.history into an array of
+// board snapshots the moment anything in here reaches for replaceState.
+let s, undos, redo, sel, timer, autoTimer, startedAt, elapsed;
 let drag = null, swallowClick = false, curtainTimer = null;
 
 // The number that produced the hand on the table, and whether that hand has
@@ -158,7 +161,7 @@ function fresh(seed = newSeed(), daily = false) {
   }
   s.stock = deck;
 
-  history = [];
+  undos = [];
   redo = [];
   sel = null;
   drag = null;
@@ -214,7 +217,7 @@ function disown() {
   query.delete('deal');
   query.delete('daily');
   const rest = query.toString();
-  history.replaceState(null, '', location.pathname + (rest ? `?${rest}` : ''));
+  window.history.replaceState(null, '', location.pathname + (rest ? `?${rest}` : ''));
 }
 
 function newSeed() {
@@ -231,8 +234,8 @@ const snapshot = () => ({
 });
 
 function push() {
-  history.push(snapshot());
-  if (history.length > 200) history.shift();
+  undos.push(snapshot());
+  if (undos.length > 200) undos.shift();
   // Playing on abandons whatever branch you had walked back from.
   redo.length = 0;
   dropHint();
@@ -253,7 +256,7 @@ function apply(shot) {
 function undo() {
   // Once the cards are in the air the hand is over; there is nothing to walk back.
   if (document.body.classList.contains('is-won')) return;
-  const prev = history.pop();
+  const prev = undos.pop();
   if (!prev) return;
   stopAuto();
   redo.push(snapshot());
@@ -266,7 +269,7 @@ function redoMove() {
   const next = redo.pop();
   if (!next) return;
   stopAuto();
-  history.push(snapshot());
+  undos.push(snapshot());
   apply(next);
   say('Move redone.');
 }
@@ -288,7 +291,7 @@ function persist() {
     counted,
     elapsed: liveSecs(),
     current: snapshot(),
-    history: history.slice(-CAP),
+    history: undos.slice(-CAP),
     redo: redo.slice(-CAP),
   });
 }
@@ -300,7 +303,7 @@ function restore(g) {
 
   s = { up: g.current.up, moves: g.current.moves };
   KEYS.forEach((k, i) => { s[k] = g.current.piles[i]; });
-  history = Array.isArray(g.history) ? g.history : [];
+  undos = Array.isArray(g.history) ? g.history : [];
   redo = Array.isArray(g.redo) ? g.redo : [];
   elapsed = Number(g.elapsed) || 0;
   counted = !!g.counted;
@@ -492,7 +495,7 @@ function deal() {
     sfx.deal();
     say('Stock refilled.');
   } else {
-    history.pop();
+    undos.pop();
     return;
   }
   s.moves++;
@@ -767,7 +770,7 @@ function render(opts = {}) {
   el.count.hidden = s.stock.length === 0;
   piles.stock.classList.toggle('can-recycle', !s.stock.length && s.waste.length > 0);
   el.moves.textContent = s.moves;
-  el.undo.disabled = history.length === 0;
+  el.undo.disabled = undos.length === 0;
   el.redo.disabled = redo.length === 0;
   el.auto.hidden = !(solved() && !won());
 
