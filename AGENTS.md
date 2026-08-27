@@ -6,10 +6,14 @@
 
 Every command lives in the `justfile`, and `.github/workflows/ci.yml` runs
 `just ci` — one step, no inline shell. If CI needs to do something new, it gets
-a recipe first. The sibling repositories in this organisation each have a
-justfile whose comments claim CI runs its recipes, and in each of them CI
-re-spells the commands in YAML instead; the two have already drifted apart in
-opposite directions. That is the failure this rule exists to prevent.
+a recipe first.
+
+This rule was written here because the sibling repositories had all failed it:
+each carried a justfile whose comments claimed CI ran its recipes while CI
+re-spelled the commands in YAML, and they had drifted apart in opposite
+directions. `larry`, `looplings`, `pinball` and the landing page now hold to the
+same rule, from the same `mise.toml` baseline. Keeping it true is the ongoing
+job; the drift is what it costs to stop paying attention.
 
 ## Tools
 
