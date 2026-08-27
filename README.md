@@ -101,34 +101,63 @@ shows clean indices all the way down.
 
 ## Developing
 
-Everything is static; there is no build.
+Everything is static; there is no build. What there is, is one file that pins
+every tool and one file that holds every command.
 
 ```
-just serve     # http://127.0.0.1:8080
+mise install   # node, python, just and the linters, at the pinned versions
+just setup     # the above, plus the test dependencies and the browsers
+just           # list the recipes
+```
+
+```
+just run       # http://127.0.0.1:8080
 just test      # Playwright: Chromium, Firefox, and a mobile viewport
-just check     # syntax and manifest validation
-just icons     # re-rasterise the PNG icons from assets/favicon.svg
+just lint      # modules, workflows, the manifest, the SVGs, the pinned versions
+just security  # gitleaks over the history, npm audit over the dependencies
+just build     # assemble dist/, which is exactly what gets published
+just ci        # all of the above, in the order CI runs them
 ```
 
-216 tests across eight files: the rules, undo and redo, resuming a hand across
+Tool versions live in `mise.toml` and nowhere else. `.github/workflows/ci.yml`
+installs that same file with `jdx/mise-action` and then runs `just ci` — one
+step, no inline shell — so a workflow can never carry a command you cannot run
+yourself. The justfile puts mise's shims on `PATH`, so the recipes work whether
+or not your shell has activated mise.
+
+`.devcontainer/` builds on Playwright's official image, which is also the
+container CI runs the suite in, so the browsers and the system libraries behind
+them are identical in both places. Open the folder in a container and
+`postCreateCommand` runs `just setup` for you. It is built for rootless podman:
+root inside the container maps to your own user outside it, and the workspace
+mount carries `,Z` so SELinux relabels it rather than being switched off.
+
+The image tag must equal the `@playwright/test` version in `package.json` —
+Playwright cannot find its browsers otherwise, and Dependabot bumps the package
+without knowing about the tag. `just lint-versions` compares them and is part
+of `just lint`.
+
+217 tests across eight files: the rules, undo and redo, resuming a hand across
 a reload, the deal number and the daily streak, the hint ranking and dead-hand
 detection against constructed boards, drag-and-drop with both a mouse and
 synthetic touch, arrow-key navigation, offline play behind a stopped network,
 the responsive layout at each viewport, and one complete game played from the
 deal to the win screen.
 
-Note that `node --check` silently accepts any file containing ESM syntax, so
-`just check` uses `node --input-type=module --check` instead. The obvious form
-of that recipe checks nothing at all.
-
 Without `just`, `python3 -m http.server 8080` and `npm test` do the same thing.
-`npm install` is only needed for the tests — the game itself has no dependencies.
+`npm install` is only needed for the tests — the game itself has no
+dependencies.
 
 ## Deployment
 
-`.github/workflows/pages.yml` uploads the repository as-is to GitHub Pages on
-every push to `main`. There is no build step to go wrong. `ci.yml` runs the
-Playwright suite on Chromium and Firefox for every push and pull request.
+`.github/workflows/pages.yml` runs the full suite first, then publishes on
+every push to `main`. It uploads `dist/` rather than the repository, so the test
+suite, the tooling and the lockfile stay off the web server; `just build` is
+what assembles it, and there is still no build step to go wrong.
+
+Deploying used to be a separate workflow that raced CI and knew nothing about
+it, which is how a commit with a red suite once reached the live site. Now
+nothing ships until `just ci` is green.
 
 ## Licence
 
