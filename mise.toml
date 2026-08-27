@@ -1,0 +1,27 @@
+# Every development tool this repository expects, pinned once. CI installs
+# exactly this list (jdx/mise-action) and runs the same `just` recipes, so
+# local and CI can never disagree about a tool's version.
+#
+# Task running belongs to just. There are deliberately no [tasks] here: two
+# task runners in one repository means neither is trusted.
+[tools]
+# The game ships no JavaScript dependencies. Node is here for the test runner
+# and the syntax check, which is version-sensitive in a way that bit us once:
+# `node --check` silently accepts malformed ESM, so the check runs under
+# `--input-type=module` and the Node version has to be a known quantity.
+node = "24.20.0"
+
+# Not optional, and easy to mistake for it. The Playwright suite starts its
+# server with `python3 -m http.server`, and the Playwright container image
+# installs no Python at all, so without this pin the suite cannot run there.
+python = "3.13.15"
+
+just = "1.55.1"
+actionlint = "1.7.12"
+zizmor = "1.29.0"
+"pipx:yamllint" = "1.38.0"
+gitleaks = "8.30.1"
+
+[settings]
+# The pipx backend goes through uv rather than needing a pipx of its own.
+pipx.uvx = true

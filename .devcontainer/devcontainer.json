@@ -1,0 +1,30 @@
+{
+  "name": "solitaire",
+  "build": {
+    "dockerfile": "Containerfile",
+    "context": ".."
+  },
+
+  // Pinned together so the path inside the container never depends on what the
+  // checkout directory happens to be called on the host.
+  //
+  // The ",Z" relabels the bind mount for SELinux. The devcontainer CLI does not
+  // append :z/:Z to the mount it generates, so declaring the mount here is the
+  // way to get a correct label instead of disabling enforcement for the
+  // container.
+  "workspaceFolder": "/workspaces/solitaire",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/solitaire,type=bind,Z",
+
+  // Chromium crashes on the 64MB of /dev/shm a container gets by default.
+  "runArgs": ["--shm-size=1g"],
+
+  // Install just from mise first, then let the justfile do the rest, so a
+  // devcontainer and a laptop are set up by the same recipe.
+  "postCreateCommand": "mise trust --quiet && mise install --yes just && just setup",
+
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-playwright.playwright", "tamasfe.even-better-toml"]
+    }
+  }
+}
