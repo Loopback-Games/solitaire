@@ -96,10 +96,24 @@ test *args:
 test-only project:
     npx playwright test --project={{ project }}
 
-# Secrets in the history, and advisories against the dependencies.
+# Two advisory databases rather than one: npm audit reports against its own and
+# osv-scanner against OSV's, and they disagree often enough on a dev-only tree
+# to be worth the few seconds. Only npm audit gates, at `high` — the game ships
+# no runtime dependencies, so a moderate advisory in the build tree is not
+# reachable by a player, and a gate that goes red with no fix available is a
+# gate somebody eventually weakens. osv-scanner has no severity filter, so
+# those findings stay visible without blocking.
+#
+# gitleaks reads the history rather than the working tree, because a key that
+# was committed and then deleted is still a key that was published. That is
+# what makes CI need a full clone. `gitleaks git` rather than the older
+# `gitleaks detect`, which no longer appears in the command list.
+
+# Secrets in the history, and advisories against the dependencies, twice.
 security:
-    gitleaks detect --no-banner --redact
-    npm audit --audit-level=moderate
+    gitleaks git . --no-banner --redact
+    npm audit --audit-level=high
+    osv-scanner scan source --lockfile package-lock.json
 
 # Assemble exactly what gets published into dist/.
 build:
@@ -121,6 +135,15 @@ ci: lint security test build
 # Re-rasterise the PNG icons from assets/favicon.svg.
 icons:
     node tools/icons.mjs
+
+# The point of this recipe is that it proves the claim: the same `just ci`, on a
+# machine that is neither this laptop nor the runner, from the same mise.toml.
+# If it passes here and on a laptop, CI is not going to surprise anyone.
+
+# Run the full gate inside the devcontainer.
+container:
+    devcontainer up --docker-path podman --workspace-folder .
+    devcontainer exec --docker-path podman --workspace-folder . just ci
 
 # Remove build output and test artefacts.
 clean:
