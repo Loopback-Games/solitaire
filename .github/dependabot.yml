@@ -1,10 +1,24 @@
+# Tool versions in mise.toml are not covered here: Dependabot has no mise
+# ecosystem. Bump those deliberately with `mise upgrade`.
+#
+# The Playwright container image and the @playwright/test package have to move
+# together or Playwright cannot find its browsers, and they sit in different
+# ecosystems, so Dependabot cannot open them as one pull request. It does not
+# need to: `just lint-versions` fails whichever arrives first, which is the
+# signal to bump the other in the same branch.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+
   - package-ecosystem: npm
     directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /.devcontainer
     schedule:
       interval: weekly
