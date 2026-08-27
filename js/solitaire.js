@@ -138,6 +138,7 @@ function fresh(seed = newSeed(), daily = false) {
   if (!sameDaily) abandon();
   isDaily = daily;
   dealSeed = seed >>> 0;
+  disown();
   const deck = [...Array(52).keys()];
   const roll = mulberry32(dealSeed);
   for (let i = 51; i > 0; i--) {
@@ -197,6 +198,23 @@ function mulberry32(n) {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return (((t ^ (t >>> 14)) >>> 0) / 4294967296 * max) | 0;
   };
+}
+
+/* A URL that still names a deal you are no longer playing is a URL that throws
+ * your hand away on the next refresh: the named deal wins over the saved one,
+ * by design, so the name has to go when the hand does. Copy link in the sheet
+ * is how you ask for a shareable one. */
+function disown() {
+  const query = new URLSearchParams(location.search);
+  const named = Number.parseInt(query.get('deal'), 10);
+  const stale = (query.has('deal') && (!Number.isFinite(named) || (named >>> 0) !== dealSeed))
+             || (query.has('daily') && !isDaily);
+  if (!stale) return;
+
+  query.delete('deal');
+  query.delete('daily');
+  const rest = query.toString();
+  history.replaceState(null, '', location.pathname + (rest ? `?${rest}` : ''));
 }
 
 function newSeed() {

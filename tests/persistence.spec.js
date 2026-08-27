@@ -204,3 +204,29 @@ test('a new deal resets the clock on screen', async ({ page }) => {
   await page.click('#btn-new');
   await expect(page.locator('#stat-time')).toHaveText('0:00');
 });
+
+test('the URL stops naming a deal once you stop playing it', async ({ page }) => {
+  await page.goto(DEAL);
+  await page.click('#stock');
+  expect(new URL(page.url()).search, 'the named hand keeps its name').toBe('?deal=7');
+
+  // Deal again hands you a different shuffle; the address bar must not go on
+  // claiming the old one, or this reload would throw the new hand away.
+  await page.click('#btn-new');
+  expect(new URL(page.url()).search).toBe('');
+
+  await page.click('#stock');
+  const dealt = await board(page);
+  await settled(page);
+  await page.reload();
+  expect(await board(page)).toEqual(dealt);
+});
+
+test('the daily lets go of the URL when you leave it', async ({ page }) => {
+  await page.goto('/?daily');
+  await page.click('#stock');
+  expect(new URL(page.url()).search).toBe('?daily');
+
+  await page.click('#btn-new');
+  expect(new URL(page.url()).search).toBe('');
+});
