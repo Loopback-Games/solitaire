@@ -1190,6 +1190,12 @@ document.addEventListener('visibilitychange', () => {
 
 /* -------------------------------------------------------------- boot --- */
 
+/* The manifest has always said this game installs. The worker is what makes an
+ * installed copy open when there is nothing behind it. */
+if ('serviceWorker' in navigator) {
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+
 paintDraw();
 paintSound();
 enable(sound);
