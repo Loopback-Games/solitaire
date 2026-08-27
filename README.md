@@ -22,12 +22,20 @@ Even the cascade at the end works this way: the whole bouncing arc is one
 `@keyframes` rule, and JavaScript hands each card three numbers — how far it is
 above the table, which way it is heading, and when to go.
 
-That is under a thousand lines of vanilla JavaScript across a handful of native
-ES modules, with no framework, no build step, and no runtime dependencies.
-Klondike needs a shuffle, move validation and win detection, so zero was never
-on the table — but nothing in here does a job CSS could do instead.
+That is about 1,700 lines of vanilla JavaScript across six native ES modules —
+the game, what it remembers, what it suggests, what it sounds like, how the
+arrow keys move about it, and the service worker — with no framework, no build
+step, and no runtime dependencies. Klondike needs a shuffle, move validation and
+win detection, so zero was never on the table, and neither was one file: nothing
+in here does a job CSS could do instead, but the parts that are genuinely
+JavaScript are worth being able to read separately.
 
-The only external request is the Google Fonts stylesheet.
+The card sounds are synthesised rather than sampled, so they cost no bytes: a
+card landing is a very short burst of band-passed noise, which is what a card
+landing is.
+
+The only external request is the Google Fonts stylesheet, and every typeface
+falls back to a system face, so the game reads fine without it.
 
 ## Playing
 
@@ -44,19 +52,37 @@ can legally go to: mint is the card in your hand, ochre is where it can land.
 | Deal | Click the stock; click again when empty to fold the waste back in |
 | Put it back down | Click it again, or press `Esc` |
 | Change your mind | **Undo** and **Redo** walk the hand back and forward |
+| Get unstuck | **Hint** rings one move it would make; press again for the next |
+| Everything else | **More** opens the draw count, sound, the deal, and your record |
 | Finish a solved game | **Finish it** appears once no cards are face down |
 
 Win and all fifty-two pour off the foundations, bounce off the table and sail
 out over the edge. Click to skip to the score.
 
-Keyboard: `Tab` to a card, `Enter` to pick it up, `Tab` to a highlighted pile,
-`Enter` to drop. `U` undo, `R` redo, `N` new deal, `D` toggle draw count, `Esc`
-deselect. `Ctrl`/`Cmd`+`Z` works too, shifted for redo.
+The hint only ever points; it never plays for you. It also declines to suggest
+a move it would want to undo next turn, which is how hints in solitaire usually
+end up going in circles. When a hand really is over — nothing on the table can
+move and nothing left in the stock fits anywhere — the game says so instead of
+letting you grind.
+
+Keyboard: `Tab` into the board, then the arrows move a cursor. Left and right
+run along a row; up and down cross between the stock and foundations above and
+the columns below, except inside a column, where they walk the fan so you choose
+how deep into a run you take hold. `Enter` picks up and drops, `Esc` puts down.
+`U` undo, `R` redo, `N` new deal, `D` draw count, and `Ctrl`/`Cmd`+`Z` works
+too, shifted for redo.
 
 Close the tab mid-hand and the hand is still there when you come back, walk-back
 stacks and all. Every deal has a number: add `?deal=42` to the URL to play a
-specific shuffle. Same number, same hand, every time — useful for sharing a deal
-or reporting a bug.
+specific shuffle, or copy the link from **More**. Same number, same hand, every
+time — useful for sharing a deal or reporting a bug.
+
+`?daily` is today's hand, the same one for everybody, seeded from the date at
+your midnight. One shuffle a day and you may undo as far as you like within it;
+restarting counts as walking every move back, but starting a different deal
+spends the day. It keeps its own streak, separate from the freeplay record.
+
+Add it to your home screen and it plays with no network at all.
 
 ## Rules
 
@@ -81,11 +107,19 @@ Everything is static; there is no build.
 just serve     # http://127.0.0.1:8080
 just test      # Playwright: Chromium, Firefox, and a mobile viewport
 just check     # syntax and manifest validation
+just icons     # re-rasterise the PNG icons from assets/favicon.svg
 ```
 
-The suite covers the rules, undo, the keyboard path, drag-and-drop with both a
-mouse and synthetic touch, the responsive layout at each viewport, and one
-complete game played from the deal to the win screen.
+216 tests across eight files: the rules, undo and redo, resuming a hand across
+a reload, the deal number and the daily streak, the hint ranking and dead-hand
+detection against constructed boards, drag-and-drop with both a mouse and
+synthetic touch, arrow-key navigation, offline play behind a stopped network,
+the responsive layout at each viewport, and one complete game played from the
+deal to the win screen.
+
+Note that `node --check` silently accepts any file containing ESM syntax, so
+`just check` uses `node --input-type=module --check` instead. The obvious form
+of that recipe checks nothing at all.
 
 Without `just`, `python3 -m http.server 8080` and `npm test` do the same thing.
 `npm install` is only needed for the tests — the game itself has no dependencies.
