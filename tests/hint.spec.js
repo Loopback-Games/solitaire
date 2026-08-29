@@ -5,16 +5,29 @@ const STORE = 'lbg.solitaire.v2';
 
 // Card ids run spades 0-12, hearts 13-25, diamonds 26-38, clubs 39-51, each
 // suit ascending from the ace. Black cards are the spades and the clubs.
-const seed = (page, built) => page.addInitScript(([k, { piles, up }]) => {
-  localStorage.setItem(k, JSON.stringify({
-    v: 2,
-    prefs: { drawN: 1, sound: false },
-    stats: { played: 0, won: 0, streak: 0, bestStreak: 0, bestTime: 0, bestMoves: 0 },
-    daily: null,
-    game: { seed: 7, isDaily: false, drawN: 1, counted: true, elapsed: 5,
-            current: { up, moves: 20, piles } },
-  }));
-}, [STORE, built]);
+const seed = (page, built) =>
+  page.addInitScript(
+    ([k, { piles, up }]) => {
+      localStorage.setItem(
+        k,
+        JSON.stringify({
+          v: 2,
+          prefs: { drawN: 1, sound: false },
+          stats: { played: 0, won: 0, streak: 0, bestStreak: 0, bestTime: 0, bestMoves: 0 },
+          daily: null,
+          game: {
+            seed: 7,
+            isDaily: false,
+            drawN: 1,
+            counted: true,
+            elapsed: 5,
+            current: { up, moves: 20, piles },
+          },
+        }),
+      );
+    },
+    [STORE, built],
+  );
 
 /* Nothing can move and nothing is left to turn: seven columns whose only
  * face-up cards are all black and none an ace, so no card fits another and no
@@ -22,11 +35,14 @@ const seed = (page, built) => page.addInitScript(([k, { piles, up }]) => {
 function deadBoard() {
   const tops = [1, 2, 3, 4, 5, 6, 7]; // the two through the eight of spades
   const piles = Array.from({ length: 13 }, () => []);
-  [...Array(52).keys()].filter((id) => !tops.includes(id))
+  [...Array(52).keys()]
+    .filter((id) => !tops.includes(id))
     .forEach((id, i) => piles[6 + (i % 7)].push(id));
   tops.forEach((id, i) => piles[6 + i].push(id));
   const up = new Array(52).fill(false);
-  tops.forEach((id) => { up[id] = true; });
+  tops.forEach((id) => {
+    up[id] = true;
+  });
   return { piles, up };
 }
 
@@ -38,10 +54,14 @@ function shuffleOnlyBoard() {
   const piles = Array.from({ length: 13 }, () => []);
   piles[6] = [11, 7];
   piles[7] = [21];
-  [1, 2, 3, 4, 5].forEach((id, i) => { piles[8 + i] = [id]; });
+  [1, 2, 3, 4, 5].forEach((id, i) => {
+    piles[8 + i] = [id];
+  });
   piles[0] = [...Array(52).keys()].filter((id) => !shown.includes(id));
   const up = new Array(52).fill(false);
-  shown.forEach((id) => { up[id] = true; });
+  shown.forEach((id) => {
+    up[id] = true;
+  });
   return { piles, up };
 }
 
@@ -77,11 +97,12 @@ test('a hint points at a move that can actually be made', async ({ page }) => {
 test('pressing again walks down the list instead of repeating itself', async ({ page }) => {
   await page.goto(DEAL);
 
-  const signature = () => page.evaluate(() => {
-    const to = document.querySelector('.pile.is-hint-to');
-    const from = document.querySelector('.card.is-hint');
-    return `${from ? from.dataset.id : '-'}>${to ? to.dataset.pile : '-'}`;
-  });
+  const signature = () =>
+    page.evaluate(() => {
+      const to = document.querySelector('.pile.is-hint-to');
+      const from = document.querySelector('.card.is-hint');
+      return `${from ? from.dataset.id : '-'}>${to ? to.dataset.pile : '-'}`;
+    });
 
   const seen = [];
   for (let i = 0; i < 4; i++) {
@@ -89,7 +110,10 @@ test('pressing again walks down the list instead of repeating itself', async ({ 
     seen.push(await signature());
   }
   expect(new Set(seen).size, `four presses gave ${seen.join(', ')}`).toBeGreaterThan(1);
-  expect(seen.every((s) => s !== '->'), 'every press pointed somewhere').toBe(true);
+  expect(
+    seen.every((s) => s !== '->'),
+    'every press pointed somewhere',
+  ).toBe(true);
 });
 
 test('a hint never suggests a shuffle it would undo next turn', async ({ page }) => {

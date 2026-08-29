@@ -9,13 +9,32 @@ const topOf = (page, key) => pile(page, key).last();
 
 // Every card, in the pile it sits in, and whether it is face up. Two boards
 // that agree on this are the same board.
-const board = (page) => page.evaluate(() => {
-  const keys = ['stock', 'waste', 'f0', 'f1', 'f2', 'f3', 't0', 't1', 't2', 't3', 't4', 't5', 't6'];
-  return keys.map((k) => [...document.querySelectorAll(`[data-pile="${k}"] .card`)]
-    .map((c) => c.dataset.id + (c.classList.contains('is-up') ? '^' : 'v')).join(','));
-});
+const board = (page) =>
+  page.evaluate(() => {
+    const keys = [
+      'stock',
+      'waste',
+      'f0',
+      'f1',
+      'f2',
+      'f3',
+      't0',
+      't1',
+      't2',
+      't3',
+      't4',
+      't5',
+      't6',
+    ];
+    return keys.map((k) =>
+      [...document.querySelectorAll(`[data-pile="${k}"] .card`)]
+        .map((c) => c.dataset.id + (c.classList.contains('is-up') ? '^' : 'v'))
+        .join(','),
+    );
+  });
 
-const stored = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), STORE);
+const stored = (page) =>
+  page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), STORE);
 
 // The board reaches the disk on a 250ms debounce, so a reload has to wait for
 // the write rather than race it.
@@ -145,14 +164,27 @@ test('a v1 record is carried across', async ({ page }) => {
 
 test('a damaged saved hand is thrown away rather than dealt', async ({ page }) => {
   await page.addInitScript((key) => {
-    localStorage.setItem(key, JSON.stringify({
-      v: 2,
-      prefs: { drawN: 1, sound: false },
-      stats: { played: 0, won: 0, streak: 0, bestStreak: 0, bestTime: 0, bestMoves: 0 },
-      daily: null,
-      // Three cards short of a deck: the write was cut off part way.
-      game: { seed: 7, drawN: 1, counted: true, elapsed: 9, current: { up: new Array(52).fill(false), moves: 4, piles: [[0, 1, 2], [], [], [], [], [], [3], [4], [5], [6], [7], [8], [9]] } },
-    }));
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        v: 2,
+        prefs: { drawN: 1, sound: false },
+        stats: { played: 0, won: 0, streak: 0, bestStreak: 0, bestTime: 0, bestMoves: 0 },
+        daily: null,
+        // Three cards short of a deck: the write was cut off part way.
+        game: {
+          seed: 7,
+          drawN: 1,
+          counted: true,
+          elapsed: 9,
+          current: {
+            up: new Array(52).fill(false),
+            moves: 4,
+            piles: [[0, 1, 2], [], [], [], [], [], [3], [4], [5], [6], [7], [8], [9]],
+          },
+        },
+      }),
+    );
   }, STORE);
   await page.goto(DEAL);
 
@@ -166,13 +198,22 @@ test('a finished hand is not offered again', async ({ page }) => {
     const piles = [[], [], [], [], [], [], [], [], [], [], [], [], []];
     // Every card home on its foundation — the hand is over.
     for (let id = 0; id < 52; id++) piles[2 + ((id / 13) | 0)].push(id);
-    localStorage.setItem(key, JSON.stringify({
-      v: 2,
-      prefs: { drawN: 1, sound: false },
-      stats: { played: 1, won: 1, streak: 1, bestStreak: 1, bestTime: 90, bestMoves: 120 },
-      daily: null,
-      game: { seed: 7, drawN: 1, counted: true, elapsed: 90, current: { up: new Array(52).fill(true), moves: 120, piles } },
-    }));
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        v: 2,
+        prefs: { drawN: 1, sound: false },
+        stats: { played: 1, won: 1, streak: 1, bestStreak: 1, bestTime: 90, bestMoves: 120 },
+        daily: null,
+        game: {
+          seed: 7,
+          drawN: 1,
+          counted: true,
+          elapsed: 90,
+          current: { up: new Array(52).fill(true), moves: 120, piles },
+        },
+      }),
+    );
   }, STORE);
   await page.goto(DEAL);
 

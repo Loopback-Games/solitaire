@@ -6,10 +6,14 @@
 
 Every command lives in the `justfile`, and `.github/workflows/ci.yml` runs
 `just ci` — one step, no inline shell. If CI needs to do something new, it gets
-a recipe first. The sibling repositories in this organisation each have a
-justfile whose comments claim CI runs its recipes, and in each of them CI
-re-spells the commands in YAML instead; the two have already drifted apart in
-opposite directions. That is the failure this rule exists to prevent.
+a recipe first.
+
+This rule was written here because the sibling repositories had all failed it:
+each carried a justfile whose comments claimed CI ran its recipes while CI
+re-spelled the commands in YAML, and they had drifted apart in opposite
+directions. `larry`, `looplings`, `pinball` and the landing page now hold to the
+same rule, from the same `mise.toml` baseline. Keeping it true is the ongoing
+job; the drift is what it costs to stop paying attention.
 
 ## Tools
 
@@ -33,6 +37,17 @@ browsers otherwise, and the failure is total rather than a warning.
 
 Bump the image tag, its digest and the npm package in one commit.
 
+## Formatting
+
+Prettier, pinned in `devDependencies`. `.github/` is excluded on purpose —
+`yamllint --strict` wants two spaces before an inline comment and prettier
+collapses them to one, so the workflows belong to the tool that also validates
+them.
+
+There is no ESLint. `just lint-js` parses every module with
+`node --input-type=module --check`, which is the check that matters in a
+repository shipping hand-written ES modules with no build step.
+
 ## Actions
 
 Pinned by commit SHA with the version in a trailing comment. Resolve a SHA with
@@ -42,5 +57,5 @@ Pinned by commit SHA with the version in a trailing comment. Resolve a SHA with
 ## Before you push
 
 `just ci`. Read the Playwright result off a grep of the summary line, never off
-`tail`: the trailing list of test names is the *failure* list, and it reads as a
+`tail`: the trailing list of test names is the _failure_ list, and it reads as a
 pass list once the glyphs are truncated.

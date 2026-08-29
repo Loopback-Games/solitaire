@@ -1,0 +1,11 @@
+node_modules/
+dist/
+assets/
+test-results/
+playwright-report/
+package-lock.json
+
+# yamllint --strict owns these, and the two tools disagree: prettier collapses
+# the two spaces before an inline comment that yamllint requires. One formatter
+# per file, so the workflows belong to the linter that also validates them.
+.github/

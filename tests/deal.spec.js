@@ -5,13 +5,32 @@ const STORE = 'lbg.solitaire.v2';
 
 const pile = (page, key) => page.locator(`[data-pile="${key}"] .card`);
 
-const board = (page) => page.evaluate(() => {
-  const keys = ['stock', 'waste', 'f0', 'f1', 'f2', 'f3', 't0', 't1', 't2', 't3', 't4', 't5', 't6'];
-  return keys.map((k) => [...document.querySelectorAll(`[data-pile="${k}"] .card`)]
-    .map((c) => c.dataset.id + (c.classList.contains('is-up') ? '^' : 'v')).join(','));
-});
+const board = (page) =>
+  page.evaluate(() => {
+    const keys = [
+      'stock',
+      'waste',
+      'f0',
+      'f1',
+      'f2',
+      'f3',
+      't0',
+      't1',
+      't2',
+      't3',
+      't4',
+      't5',
+      't6',
+    ];
+    return keys.map((k) =>
+      [...document.querySelectorAll(`[data-pile="${k}"] .card`)]
+        .map((c) => c.dataset.id + (c.classList.contains('is-up') ? '^' : 'v'))
+        .join(','),
+    );
+  });
 
-const stored = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), STORE);
+const stored = (page) =>
+  page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), STORE);
 
 // The same calendar arithmetic the game uses, so a test never disagrees with
 // the player's clock about which day it is.
@@ -23,15 +42,22 @@ const dayStamp = (offset = 0) => {
 
 const seedFor = (day) => Number(day.replaceAll('-', ''));
 
-const seedDaily = (page, daily) => page.addInitScript(([k, d]) => {
-  localStorage.setItem(k, JSON.stringify({
-    v: 2,
-    prefs: { drawN: 1, sound: false },
-    stats: { played: 0, won: 0, streak: 0, bestStreak: 0, bestTime: 0, bestMoves: 0 },
-    daily: d,
-    game: null,
-  }));
-}, [STORE, daily]);
+const seedDaily = (page, daily) =>
+  page.addInitScript(
+    ([k, d]) => {
+      localStorage.setItem(
+        k,
+        JSON.stringify({
+          v: 2,
+          prefs: { drawN: 1, sound: false },
+          stats: { played: 0, won: 0, streak: 0, bestStreak: 0, bestTime: 0, bestMoves: 0 },
+          daily: d,
+          game: null,
+        }),
+      );
+    },
+    [STORE, daily],
+  );
 
 test.beforeEach(async ({ page }) => {
   const problems = [];
@@ -77,8 +103,15 @@ test('replay deals the same hand again from the start', async ({ page }) => {
   await expect(page.locator('#stat-moves')).toHaveText('0');
 });
 
-test('the copy link carries the hand to another tab', async ({ page, context, browserName }) => {
-  test.skip(browserName !== 'chromium', 'clipboard permissions are Chromium-only in Playwright');
+test('the copy link carries the hand to another tab', async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(
+    browserName !== 'chromium',
+    'clipboard permissions are Chromium-only in Playwright',
+  );
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto(DEAL);
 
@@ -109,21 +142,31 @@ test('today’s deal is the same hand all day', async ({ page }) => {
 
 test('winning the daily advances its streak and leaves freeplay alone', async ({ page }) => {
   // One card short of home, so the win is a single double-click away.
-  await page.addInitScript(([k, day]) => {
-    const piles = [[], [], [], [], [], [], [], [], [], [], [], [], []];
-    for (let id = 0; id < 51; id++) piles[2 + ((id / 13) | 0)].push(id);
-    piles[6].push(51); // the king of clubs, still on t0
-    localStorage.setItem(k, JSON.stringify({
-      v: 2,
-      prefs: { drawN: 1, sound: false },
-      stats: { played: 0, won: 0, streak: 0, bestStreak: 0, bestTime: 0, bestMoves: 0 },
-      daily: { day, result: 'playing', streak: 2, bestStreak: 4 },
-      game: {
-        seed: Number(day.replaceAll('-', '')), isDaily: true, drawN: 1, counted: true, elapsed: 30,
-        current: { up: new Array(52).fill(true), moves: 100, piles },
-      },
-    }));
-  }, [STORE, dayStamp()]);
+  await page.addInitScript(
+    ([k, day]) => {
+      const piles = [[], [], [], [], [], [], [], [], [], [], [], [], []];
+      for (let id = 0; id < 51; id++) piles[2 + ((id / 13) | 0)].push(id);
+      piles[6].push(51); // the king of clubs, still on t0
+      localStorage.setItem(
+        k,
+        JSON.stringify({
+          v: 2,
+          prefs: { drawN: 1, sound: false },
+          stats: { played: 0, won: 0, streak: 0, bestStreak: 0, bestTime: 0, bestMoves: 0 },
+          daily: { day, result: 'playing', streak: 2, bestStreak: 4 },
+          game: {
+            seed: Number(day.replaceAll('-', '')),
+            isDaily: true,
+            drawN: 1,
+            counted: true,
+            elapsed: 30,
+            current: { up: new Array(52).fill(true), moves: 100, piles },
+          },
+        }),
+      );
+    },
+    [STORE, dayStamp()],
+  );
 
   await page.goto('/?daily');
   await expect(pile(page, 'f3')).toHaveCount(12);
@@ -175,7 +218,10 @@ test('a run carries over one day and no further', async ({ page }) => {
   await seedDaily(page, { day: dayStamp(-1), result: 'won', streak: 4, bestStreak: 7 });
   await page.goto('/');
   await page.click('#btn-more');
-  await expect(page.locator('#daily-streak'), 'yesterday was won, so the run stands').toHaveText('4');
+  await expect(
+    page.locator('#daily-streak'),
+    'yesterday was won, so the run stands',
+  ).toHaveText('4');
   await expect(page.locator('#daily-state')).toHaveText('Open');
   await expect(page.locator('#daily-best')).toHaveText('7');
 });
@@ -184,7 +230,9 @@ test('a day skipped ends the run', async ({ page }) => {
   await seedDaily(page, { day: dayStamp(-3), result: 'won', streak: 4, bestStreak: 7 });
   await page.goto('/');
   await page.click('#btn-more');
-  await expect(page.locator('#daily-streak'), 'three days ago is not yesterday').toHaveText('0');
+  await expect(page.locator('#daily-streak'), 'three days ago is not yesterday').toHaveText(
+    '0',
+  );
   await expect(page.locator('#daily-best')).toHaveText('7');
 });
 

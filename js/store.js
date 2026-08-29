@@ -8,7 +8,7 @@
  */
 
 const STORE = 'lbg.solitaire.v2';
-const V1  = 'lbg.solitaire.v1';
+const V1 = 'lbg.solitaire.v1';
 
 // A best time or a best move count of 0 means "never yet", which is why every
 // comparison against them tests for truthiness before it tests for smaller.
@@ -23,13 +23,19 @@ const base = () => ({
 let cache = null;
 
 function raw(key) {
-  try { return JSON.parse(localStorage.getItem(key)); }
-  catch { return null; }
+  try {
+    return JSON.parse(localStorage.getItem(key));
+  } catch {
+    return null;
+  }
 }
 
 function commit() {
-  try { localStorage.setItem(STORE, JSON.stringify(cache)); }
-  catch { /* private browsing — the game plays, it just forgets */ }
+  try {
+    localStorage.setItem(STORE, JSON.stringify(cache));
+  } catch {
+    /* private browsing — the game plays, it just forgets */
+  }
 }
 
 /* Subtrees are merged one level deep, so a payload written by an older build
@@ -45,7 +51,12 @@ export function read() {
   const found = raw(STORE);
   if (found && found.v === 2) {
     const b = base();
-    cache = { ...b, ...found, prefs: { ...b.prefs, ...found.prefs }, stats: { ...b.stats, ...found.stats } };
+    cache = {
+      ...b,
+      ...found,
+      prefs: { ...b.prefs, ...found.prefs },
+      stats: { ...b.stats, ...found.stats },
+    };
     return cache;
   }
 
@@ -57,7 +68,11 @@ export function read() {
     cache.stats.played = cache.stats.won;
     cache.stats.bestTime = Number(old.best) || 0;
     commit();
-    try { localStorage.removeItem(V1); } catch { /* nothing to clean up */ }
+    try {
+      localStorage.removeItem(V1);
+    } catch {
+      /* nothing to clean up */
+    }
   }
   return cache;
 }
@@ -88,10 +103,15 @@ export function clearGame() {
 export function flush() {
   clearTimeout(pending);
   pending = null;
-  if (queued) { write({ game: queued }); queued = null; }
+  if (queued) {
+    write({ game: queued });
+    queued = null;
+  }
 }
 
 // A tab can be discarded without ever firing unload, so the last board state is
 // committed the moment the page is hidden rather than when it is closed.
 addEventListener('pagehide', flush);
-document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) flush();
+});

@@ -9,19 +9,20 @@
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-# mise's shims, so every recipe works in a shell that has not activated mise.
-# A devcontainer runs plenty of non-interactive shells and none of them source
-# a profile.
-export PATH := env("HOME") / ".local/share/mise/shims" + ":" + env("PATH")
+# The project's own binaries first, then mise's shims. `prettier` here is the
+# one in package-lock.json rather than whatever the machine has globally — and
+# without node_modules/.bin on this line it is not found at all, which is how
+# `just lint` passed on a laptop that had prettier elsewhere and failed in CI.
+# The shims mean every recipe works in a shell that has not activated mise, and
+# a devcontainer runs plenty of those.
+#
+# The parentheses matter: `/` and `+` share a precedence level in just and
+# associate left.
+export PATH := justfile_directory() / "node_modules/.bin" + ":" + (env("HOME") / ".local/share/mise/shims") + ":" + env("PATH")
 
 # The files the site is actually made of. Everything else in the repository is
 # how it gets built and checked, and has no business on a public web server.
 site := "index.html sw.js manifest.webmanifest .nojekyll LICENSE css js assets"
-
-# There is no `fmt` recipe on purpose. The only formatter that would apply here
-# is prettier, and reaching for `npx --yes prettier@3` would put an unpinned
-# tool back in a repository whose whole tooling story is that versions are
-# pinned in one file.
 
 # List the available recipes.
 default:
@@ -42,8 +43,18 @@ setup:
         echo "browsers already in the image at ${PLAYWRIGHT_BROWSERS_PATH}"
     fi
 
+# Prettier was refused here for a long time, on the grounds that reaching for
+# `npx --yes prettier@3` would put an unpinned tool back in a repository whose
+# whole story is that versions live in one file. That objection no longer holds:
+# it is a pinned devDependency in the lockfile, like everything else.
+
+# Format every file in place.
+fmt:
+    prettier --write .
+
 # Static analysis of everything. Changes nothing, and fails rather than skips.
 lint: lint-js lint-config lint-versions
+    prettier --check .
 
 # Note the `--input-type=module` below: a bare `node --check` silently accepts
 # a file containing ESM syntax, so the obvious form of this recipe checks
@@ -96,10 +107,24 @@ test *args:
 test-only project:
     npx playwright test --project={{ project }}
 
-# Secrets in the history, and advisories against the dependencies.
+# Two advisory databases rather than one: npm audit reports against its own and
+# osv-scanner against OSV's, and they disagree often enough on a dev-only tree
+# to be worth the few seconds. Only npm audit gates, at `high` — the game ships
+# no runtime dependencies, so a moderate advisory in the build tree is not
+# reachable by a player, and a gate that goes red with no fix available is a
+# gate somebody eventually weakens. osv-scanner has no severity filter, so
+# those findings stay visible without blocking.
+#
+# gitleaks reads the history rather than the working tree, because a key that
+# was committed and then deleted is still a key that was published. That is
+# what makes CI need a full clone. `gitleaks git` rather than the older
+# `gitleaks detect`, which no longer appears in the command list.
+
+# Secrets in the history, and advisories against the dependencies, twice.
 security:
-    gitleaks detect --no-banner --redact
-    npm audit --audit-level=moderate
+    gitleaks git . --no-banner --redact
+    npm audit --audit-level=high
+    osv-scanner scan source --lockfile package-lock.json
 
 # Assemble exactly what gets published into dist/.
 build:
@@ -121,6 +146,15 @@ ci: lint security test build
 # Re-rasterise the PNG icons from assets/favicon.svg.
 icons:
     node tools/icons.mjs
+
+# The point of this recipe is that it proves the claim: the same `just ci`, on a
+# machine that is neither this laptop nor the runner, from the same mise.toml.
+# If it passes here and on a laptop, CI is not going to surprise anyone.
+
+# Run the full gate inside the devcontainer.
+container:
+    devcontainer up --docker-path podman --workspace-folder .
+    devcontainer exec --docker-path podman --workspace-folder . just ci
 
 # Remove build output and test artefacts.
 clean:

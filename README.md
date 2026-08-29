@@ -44,17 +44,17 @@ on a mouse and on a touchscreen. Tap-and-tap is easier one-handed on a phone;
 dragging feels better with a mouse. Picking a card up highlights every pile it
 can legally go to: mint is the card in your hand, ochre is where it can land.
 
-| | |
-| --- | --- |
-| Move a card | Drag it, or click it and click the destination |
-| Move a run | Grab the lowest card of the run; the rest come with it |
-| Send it to a foundation | Double-click it |
-| Deal | Click the stock; click again when empty to fold the waste back in |
-| Put it back down | Click it again, or press `Esc` |
-| Change your mind | **Undo** and **Redo** walk the hand back and forward |
-| Get unstuck | **Hint** rings one move it would make; press again for the next |
-| Everything else | **More** opens the draw count, sound, the deal, and your record |
-| Finish a solved game | **Finish it** appears once no cards are face down |
+|                         |                                                                   |
+| ----------------------- | ----------------------------------------------------------------- |
+| Move a card             | Drag it, or click it and click the destination                    |
+| Move a run              | Grab the lowest card of the run; the rest come with it            |
+| Send it to a foundation | Double-click it                                                   |
+| Deal                    | Click the stock; click again when empty to fold the waste back in |
+| Put it back down        | Click it again, or press `Esc`                                    |
+| Change your mind        | **Undo** and **Redo** walk the hand back and forward              |
+| Get unstuck             | **Hint** rings one move it would make; press again for the next   |
+| Everything else         | **More** opens the draw count, sound, the deal, and your record   |
+| Finish a solved game    | **Finish it** appears once no cards are face down                 |
 
 Win and all fifty-two pour off the foundations, bounce off the table and sail
 out over the edge. Click to skip to the score.

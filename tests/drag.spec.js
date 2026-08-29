@@ -40,7 +40,10 @@ test('a card can be dragged onto a legal pile', async ({ page }) => {
   await dragTo(page, two, three);
 
   await expect(page.locator('[data-pile="t5"] .card')).toHaveCount(7);
-  await expect(page.locator('[data-pile="t5"] .card').last()).toHaveAttribute('aria-label', '2 of spades');
+  await expect(page.locator('[data-pile="t5"] .card').last()).toHaveAttribute(
+    'aria-label',
+    '2 of spades',
+  );
   await expect(page.locator('[data-pile="t6"] .card')).toHaveCount(6);
   await expect(page.locator('#stat-moves')).toHaveText('1');
   await expect(page.locator('.card.is-dragging')).toHaveCount(0);
@@ -108,7 +111,7 @@ test('a press that never moves is still a click', async ({ page }) => {
   const a = await centre(two);
   await page.mouse.move(a.x, a.y);
   await page.mouse.down();
-  await page.mouse.move(a.x + 2, a.y + 1);   // inside the slop threshold
+  await page.mouse.move(a.x + 2, a.y + 1); // inside the slop threshold
   await page.mouse.up();
 
   await expect(two).toHaveClass(/is-picked/);
@@ -123,18 +126,35 @@ test('touch drags the same way a mouse does', async ({ page }) => {
   const a = await centre(two);
   const b = await centre(page.locator('[data-pile="t5"] .card').last());
 
-  await page.evaluate(async ([from, to]) => {
-    const at = document.elementFromPoint(from.x, from.y);
-    const send = (type, x, y, target) => target.dispatchEvent(new PointerEvent(type, {
-      bubbles: true, cancelable: true, pointerId: 1, pointerType: 'touch',
-      isPrimary: true, clientX: x, clientY: y, button: 0,
-    }));
-    send('pointerdown', from.x, from.y, at);
-    for (let i = 1; i <= 8; i++) {
-      send('pointermove', from.x + ((to.x - from.x) * i) / 8, from.y + ((to.y - from.y) * i) / 8, window);
-    }
-    send('pointerup', to.x, to.y, window);
-  }, [a, b]);
+  await page.evaluate(
+    async ([from, to]) => {
+      const at = document.elementFromPoint(from.x, from.y);
+      const send = (type, x, y, target) =>
+        target.dispatchEvent(
+          new PointerEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            pointerId: 1,
+            pointerType: 'touch',
+            isPrimary: true,
+            clientX: x,
+            clientY: y,
+            button: 0,
+          }),
+        );
+      send('pointerdown', from.x, from.y, at);
+      for (let i = 1; i <= 8; i++) {
+        send(
+          'pointermove',
+          from.x + ((to.x - from.x) * i) / 8,
+          from.y + ((to.y - from.y) * i) / 8,
+          window,
+        );
+      }
+      send('pointerup', to.x, to.y, window);
+    },
+    [a, b],
+  );
 
   await expect(page.locator('[data-pile="t5"] .card')).toHaveCount(7);
   await expect(page.locator('#stat-moves')).toHaveText('1');
@@ -151,17 +171,23 @@ test('a dropped card lands rather than teleports', async ({ page }) => {
 
   // Catch the snap in flight: the card is already in its new pile, but is
   // still carrying the offset that puts it back under the pointer.
-  const snapping = page.waitForFunction(() => {
-    const card = document.querySelector('.card.is-snapping');
-    return !!card && card.closest('[data-pile]').dataset.pile === 't5';
-  }, null, { timeout: 2000 });
+  const snapping = page.waitForFunction(
+    () => {
+      const card = document.querySelector('.card.is-snapping');
+      return !!card && card.closest('[data-pile]').dataset.pile === 't5';
+    },
+    null,
+    { timeout: 2000 },
+  );
 
   await dragTo(page, two, three);
   await snapping;
 
   // And it cleans up after itself rather than leaving a transform behind.
   await expect(page.locator('.card.is-snapping')).toHaveCount(0, { timeout: 2000 });
-  const left = await page.locator('[data-pile="t5"] .card').last()
+  const left = await page
+    .locator('[data-pile="t5"] .card')
+    .last()
     .evaluate((c) => c.style.getPropertyValue('--dx'));
   expect(left).toBe('');
 });
@@ -171,10 +197,14 @@ test('a rejected drop is carried back instead of vanishing', async ({ page }) =>
   await dealt(page);
 
   const two = page.locator('[data-pile="t6"] .card').last();
-  const snapping = page.waitForFunction(() => {
-    const card = document.querySelector('.card.is-snapping');
-    return !!card && card.closest('[data-pile]').dataset.pile === 't6';
-  }, null, { timeout: 2000 });
+  const snapping = page.waitForFunction(
+    () => {
+      const card = document.querySelector('.card.is-snapping');
+      return !!card && card.closest('[data-pile]').dataset.pile === 't6';
+    },
+    null,
+    { timeout: 2000 },
+  );
 
   await dragTo(page, two, page.locator('[data-pile="t0"] .card').last());
   await snapping;
@@ -192,8 +222,11 @@ test('reduced motion drops the card straight home', async ({ page }) => {
     sawSnap = sawSnap || (await page.locator('.card.is-snapping').count()) > 0;
   }, 10);
 
-  await dragTo(page, page.locator('[data-pile="t6"] .card').last(),
-                     page.locator('[data-pile="t5"] .card').last());
+  await dragTo(
+    page,
+    page.locator('[data-pile="t6"] .card').last(),
+    page.locator('[data-pile="t5"] .card').last(),
+  );
   clearInterval(watch);
 
   expect(sawSnap, 'nothing is animated when animation is switched off').toBe(false);
@@ -223,7 +256,10 @@ test('sound is off until asked for, and then remembered', async ({ page }) => {
     const Real = window.AudioContext;
     window.__audioBuilt = 0;
     window.AudioContext = class extends Real {
-      constructor(...args) { super(...args); window.__audioBuilt++; }
+      constructor(...args) {
+        super(...args);
+        window.__audioBuilt++;
+      }
     };
   });
   await page.goto(DEAL);
@@ -233,16 +269,20 @@ test('sound is off until asked for, and then remembered', async ({ page }) => {
   await page.click('#btn-sheet-done');
 
   await page.click('#stock');
-  expect(await page.evaluate(() => window.__audioBuilt),
-    'a silent game never opens an audio context').toBe(0);
+  expect(
+    await page.evaluate(() => window.__audioBuilt),
+    'a silent game never opens an audio context',
+  ).toBe(0);
 
   await page.click('#btn-more');
   await page.click('[data-sound="on"]');
   await expect(page.locator('[data-sound="on"]')).toHaveAttribute('aria-pressed', 'true');
   await page.click('#btn-sheet-done');
   await page.click('#stock');
-  expect(await page.evaluate(() => window.__audioBuilt),
-    'the click that switches it on is the gesture that starts it').toBeGreaterThan(0);
+  expect(
+    await page.evaluate(() => window.__audioBuilt),
+    'the click that switches it on is the gesture that starts it',
+  ).toBeGreaterThan(0);
 
   await page.reload();
   await page.click('#btn-more');

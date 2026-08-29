@@ -76,7 +76,9 @@ test('draw three deals three at a time and is remembered', async ({ page }) => {
   await expect(page.locator('[data-draw="3"]')).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('a card moves onto a legal tableau target and not onto an illegal one', async ({ page }) => {
+test('a card moves onto a legal tableau target and not onto an illegal one', async ({
+  page,
+}) => {
   await page.goto(DEAL);
 
   // This hand opens with the two of spades on t6 and the three of diamonds on t5.
@@ -145,17 +147,20 @@ test('undo walks every kind of move back', async ({ page }) => {
 
 test('the same deal number always gives the same hand', async ({ page }) => {
   await page.goto(DEAL);
-  const first = await page.locator('.pile-tableau .card.is-up').evaluateAll(
-    (els) => els.map((e) => e.getAttribute('aria-label')));
+  const first = await page
+    .locator('.pile-tableau .card.is-up')
+    .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
 
   await page.goto('/?deal=99');
-  const other = await page.locator('.pile-tableau .card.is-up').evaluateAll(
-    (els) => els.map((e) => e.getAttribute('aria-label')));
+  const other = await page
+    .locator('.pile-tableau .card.is-up')
+    .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
   expect(other).not.toEqual(first);
 
   await page.goto(DEAL);
-  const again = await page.locator('.pile-tableau .card.is-up').evaluateAll(
-    (els) => els.map((e) => e.getAttribute('aria-label')));
+  const again = await page
+    .locator('.pile-tableau .card.is-up')
+    .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
   expect(again).toEqual(first);
 });
 

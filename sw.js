@@ -30,7 +30,8 @@ const SHELL = [
 
 self.addEventListener('install', (ev) => {
   ev.waitUntil(
-    caches.open(CACHE)
+    caches
+      .open(CACHE)
       // One missing file must not cost the whole install, so they go in singly.
       .then((cache) => Promise.all(SHELL.map((url) => cache.add(url).catch(() => {}))))
       .then(() => self.skipWaiting()),
@@ -39,8 +40,11 @@ self.addEventListener('install', (ev) => {
 
 self.addEventListener('activate', (ev) => {
   ev.waitUntil(
-    caches.keys()
-      .then((names) => Promise.all(names.filter((n) => n !== CACHE).map((n) => caches.delete(n))))
+    caches
+      .keys()
+      .then((names) =>
+        Promise.all(names.filter((n) => n !== CACHE).map((n) => caches.delete(n))),
+      )
       .then(() => self.clients.claim()),
   );
 });
@@ -70,6 +74,9 @@ self.addEventListener('fetch', (ev) => {
   // ?deal= and ?daily pick a hand; they do not pick a different page. Every
   // navigation is answered from the one shell, or the cache fills with a copy
   // per deal number.
-  if (ev.request.mode === 'navigate') { ev.respondWith(fresh(ev.request, './')); return; }
+  if (ev.request.mode === 'navigate') {
+    ev.respondWith(fresh(ev.request, './'));
+    return;
+  }
   ev.respondWith(fresh(ev.request));
 });

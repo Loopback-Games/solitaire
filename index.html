@@ -1,182 +1,270 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Solitaire — Loopback Games</title>
-<meta name="description" content="Klondike solitaire you can play in any browser. No install, no account, no ads. Built by Loopback Games.">
-<meta name="theme-color" content="#2A2036">
-<meta name="color-scheme" content="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Solitaire — Loopback Games</title>
+    <meta
+      name="description"
+      content="Klondike solitaire you can play in any browser. No install, no account, no ads. Built by Loopback Games."
+    />
+    <meta name="theme-color" content="#2A2036" />
+    <meta name="color-scheme" content="dark" />
 
-<meta property="og:type" content="website">
-<meta property="og:title" content="Solitaire — Loopback Games">
-<meta property="og:description" content="Klondike solitaire you can play in any browser. No install, no account, no ads.">
-<meta property="og:image" content="assets/social.svg">
-<meta name="twitter:card" content="summary_large_image">
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Solitaire — Loopback Games" />
+    <meta
+      property="og:description"
+      content="Klondike solitaire you can play in any browser. No install, no account, no ads."
+    />
+    <meta property="og:image" content="assets/social.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
 
-<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/solitaire.css">
-</head>
-<body>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap"
+    />
+    <link rel="stylesheet" href="css/solitaire.css" />
+  </head>
+  <body>
+    <a class="skip" href="#board">Skip to the board</a>
 
-<a class="skip" href="#board">Skip to the board</a>
-
-<header class="rail rail-top">
-  <div class="brand">
-    <span class="mark" aria-hidden="true"></span>
-    <span class="brand-name">
-      <span class="brand-studio">Loopback Games</span>
-      <span class="brand-title">Solitaire</span>
-    </span>
-  </div>
-
-  <dl class="stats">
-    <div class="stat">
-      <dt>Time</dt>
-      <dd id="stat-time">0:00</dd>
-    </div>
-    <div class="stat">
-      <dt>Moves</dt>
-      <dd id="stat-moves">0</dd>
-    </div>
-    <div class="stat stat-wins">
-      <dt>Won</dt>
-      <dd id="stat-wins">0</dd>
-    </div>
-  </dl>
-</header>
-
-<main class="table">
-  <div class="board" id="board" tabindex="-1">
-
-    <section class="row row-top" aria-label="Stock and foundations">
-      <div class="stock-wrap">
-        <div class="pile pile-stock" id="stock" data-pile="stock" aria-label="Stock"></div>
-        <span class="stock-count" id="stock-count">24</span>
+    <header class="rail rail-top">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"></span>
+        <span class="brand-name">
+          <span class="brand-studio">Loopback Games</span>
+          <span class="brand-title">Solitaire</span>
+        </span>
       </div>
 
-      <div class="pile pile-waste" id="waste" data-pile="waste"></div>
+      <dl class="stats">
+        <div class="stat">
+          <dt>Time</dt>
+          <dd id="stat-time">0:00</dd>
+        </div>
+        <div class="stat">
+          <dt>Moves</dt>
+          <dd id="stat-moves">0</dd>
+        </div>
+        <div class="stat stat-wins">
+          <dt>Won</dt>
+          <dd id="stat-wins">0</dd>
+        </div>
+      </dl>
+    </header>
 
-      <div class="row-spacer" aria-hidden="true"></div>
+    <main class="table">
+      <div class="board" id="board" tabindex="-1">
+        <section class="row row-top" aria-label="Stock and foundations">
+          <div class="stock-wrap">
+            <div class="pile pile-stock" id="stock" data-pile="stock" aria-label="Stock"></div>
+            <span class="stock-count" id="stock-count">24</span>
+          </div>
 
-      <div class="pile pile-foundation" data-pile="f0" data-suit="s" aria-label="Spades foundation"></div>
-      <div class="pile pile-foundation" data-pile="f1" data-suit="h" aria-label="Hearts foundation"></div>
-      <div class="pile pile-foundation" data-pile="f2" data-suit="d" aria-label="Diamonds foundation"></div>
-      <div class="pile pile-foundation" data-pile="f3" data-suit="c" aria-label="Clubs foundation"></div>
+          <div class="pile pile-waste" id="waste" data-pile="waste"></div>
+
+          <div class="row-spacer" aria-hidden="true"></div>
+
+          <div
+            class="pile pile-foundation"
+            data-pile="f0"
+            data-suit="s"
+            aria-label="Spades foundation"
+          ></div>
+          <div
+            class="pile pile-foundation"
+            data-pile="f1"
+            data-suit="h"
+            aria-label="Hearts foundation"
+          ></div>
+          <div
+            class="pile pile-foundation"
+            data-pile="f2"
+            data-suit="d"
+            aria-label="Diamonds foundation"
+          ></div>
+          <div
+            class="pile pile-foundation"
+            data-pile="f3"
+            data-suit="c"
+            aria-label="Clubs foundation"
+          ></div>
+        </section>
+
+        <section class="row row-tableau" aria-label="Tableau">
+          <div class="pile pile-tableau" data-pile="t0" aria-label="Column 1"></div>
+          <div class="pile pile-tableau" data-pile="t1" aria-label="Column 2"></div>
+          <div class="pile pile-tableau" data-pile="t2" aria-label="Column 3"></div>
+          <div class="pile pile-tableau" data-pile="t3" aria-label="Column 4"></div>
+          <div class="pile pile-tableau" data-pile="t4" aria-label="Column 5"></div>
+          <div class="pile pile-tableau" data-pile="t5" aria-label="Column 6"></div>
+          <div class="pile pile-tableau" data-pile="t6" aria-label="Column 7"></div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="rail rail-bottom">
+      <button type="button" class="ctl" id="btn-new">
+        New<span class="ctl-long"> deal</span>
+      </button>
+      <button type="button" class="ctl" id="btn-undo" disabled>Undo</button>
+      <button type="button" class="ctl" id="btn-redo" disabled>Redo</button>
+      <button type="button" class="ctl" id="btn-hint">Hint</button>
+      <button type="button" class="ctl ctl-go" id="btn-auto" hidden>
+        Finish<span class="ctl-long"> it</span>
+      </button>
+      <button
+        type="button"
+        class="ctl"
+        id="btn-more"
+        aria-expanded="false"
+        aria-controls="sheet"
+      >
+        More
+      </button>
+    </footer>
+
+    <div class="sheet-veil" id="sheet-veil" hidden></div>
+
+    <section
+      class="sheet"
+      id="sheet"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sheet-title"
+    >
+      <h2 class="sheet-title" id="sheet-title">Table</h2>
+
+      <div class="sheet-row">
+        <span class="sheet-label" id="lbl-draw">Draw</span>
+        <div class="seg" role="group" aria-labelledby="lbl-draw">
+          <button type="button" class="seg-opt" data-draw="1" aria-pressed="true">1</button>
+          <button type="button" class="seg-opt" data-draw="3" aria-pressed="false">3</button>
+        </div>
+      </div>
+
+      <div class="sheet-row">
+        <span class="sheet-label" id="lbl-sound">Sound</span>
+        <div class="seg" role="group" aria-labelledby="lbl-sound">
+          <button type="button" class="seg-opt" data-sound="off" aria-pressed="true">
+            Off
+          </button>
+          <button type="button" class="seg-opt" data-sound="on" aria-pressed="false">On</button>
+        </div>
+      </div>
+
+      <h3 class="sheet-title">Deal</h3>
+      <div class="sheet-row">
+        <span class="sheet-label">Number</span>
+        <span class="sheet-value" id="deal-num">—</span>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="ctl" id="btn-copy">Copy link</button>
+        <button type="button" class="ctl" id="btn-replay">Replay it</button>
+      </div>
+
+      <h3 class="sheet-title">Today's deal</h3>
+      <dl class="sheet-stats">
+        <div>
+          <dt>State</dt>
+          <dd id="daily-state">Open</dd>
+        </div>
+        <div>
+          <dt>Streak</dt>
+          <dd id="daily-streak">0</dd>
+        </div>
+        <div>
+          <dt>Best run</dt>
+          <dd id="daily-best">0</dd>
+        </div>
+      </dl>
+      <button type="button" class="ctl sheet-wide" id="btn-daily">Play today's deal</button>
+
+      <h3 class="sheet-title">Record</h3>
+      <dl class="sheet-stats">
+        <div>
+          <dt>Played</dt>
+          <dd id="rec-played">0</dd>
+        </div>
+        <div>
+          <dt>Won</dt>
+          <dd id="rec-won">0</dd>
+        </div>
+        <div>
+          <dt>Rate</dt>
+          <dd id="rec-rate">—</dd>
+        </div>
+        <div>
+          <dt>Streak</dt>
+          <dd id="rec-streak">0</dd>
+        </div>
+        <div>
+          <dt>Best run</dt>
+          <dd id="rec-best-streak">0</dd>
+        </div>
+        <div>
+          <dt>Best time</dt>
+          <dd id="rec-best-time">—</dd>
+        </div>
+        <div>
+          <dt>Best moves</dt>
+          <dd id="rec-best-moves">—</dd>
+        </div>
+      </dl>
+
+      <button type="button" class="ctl sheet-done" id="btn-sheet-done">Done</button>
     </section>
 
-    <section class="row row-tableau" aria-label="Tableau">
-      <div class="pile pile-tableau" data-pile="t0" aria-label="Column 1"></div>
-      <div class="pile pile-tableau" data-pile="t1" aria-label="Column 2"></div>
-      <div class="pile pile-tableau" data-pile="t2" aria-label="Column 3"></div>
-      <div class="pile pile-tableau" data-pile="t3" aria-label="Column 4"></div>
-      <div class="pile pile-tableau" data-pile="t4" aria-label="Column 5"></div>
-      <div class="pile pile-tableau" data-pile="t5" aria-label="Column 6"></div>
-      <div class="pile pile-tableau" data-pile="t6" aria-label="Column 7"></div>
-    </section>
-
-  </div>
-</main>
-
-<footer class="rail rail-bottom">
-  <button type="button" class="ctl" id="btn-new">New<span class="ctl-long"> deal</span></button>
-  <button type="button" class="ctl" id="btn-undo" disabled>Undo</button>
-  <button type="button" class="ctl" id="btn-redo" disabled>Redo</button>
-  <button type="button" class="ctl" id="btn-hint">Hint</button>
-  <button type="button" class="ctl ctl-go" id="btn-auto" hidden>Finish<span class="ctl-long"> it</span></button>
-  <button type="button" class="ctl" id="btn-more" aria-expanded="false" aria-controls="sheet">More</button>
-</footer>
-
-<div class="sheet-veil" id="sheet-veil" hidden></div>
-
-<section class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-title">
-  <h2 class="sheet-title" id="sheet-title">Table</h2>
-
-  <div class="sheet-row">
-    <span class="sheet-label" id="lbl-draw">Draw</span>
-    <div class="seg" role="group" aria-labelledby="lbl-draw">
-      <button type="button" class="seg-opt" data-draw="1" aria-pressed="true">1</button>
-      <button type="button" class="seg-opt" data-draw="3" aria-pressed="false">3</button>
+    <div class="curtain" id="stuck" hidden>
+      <div class="won" role="dialog" aria-modal="true" aria-labelledby="stuck-title">
+        <h2 id="stuck-title">Nothing left to play.</h2>
+        <p class="stuck-note">
+          No card on the table can move, and nothing left in the stock fits anywhere. Undo is
+          still open if you want to try another line.
+        </p>
+        <div class="won-actions">
+          <button type="button" class="ctl ctl-go" id="btn-stuck-new">New deal</button>
+          <button type="button" class="ctl" id="btn-stuck-replay">Replay this hand</button>
+          <button type="button" class="ctl" id="btn-stuck-stay">Keep looking</button>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <div class="sheet-row">
-    <span class="sheet-label" id="lbl-sound">Sound</span>
-    <div class="seg" role="group" aria-labelledby="lbl-sound">
-      <button type="button" class="seg-opt" data-sound="off" aria-pressed="true">Off</button>
-      <button type="button" class="seg-opt" data-sound="on" aria-pressed="false">On</button>
+    <p class="sr-only" role="status" aria-live="polite" id="announce"></p>
+
+    <div class="curtain" id="curtain" hidden>
+      <div class="won" role="dialog" aria-modal="true" aria-labelledby="won-title">
+        <span class="won-mark" aria-hidden="true"></span>
+        <h2 id="won-title">All fifty-two home.</h2>
+        <dl class="won-stats">
+          <div>
+            <dt>Time</dt>
+            <dd id="won-time">0:00</dd>
+          </div>
+          <div>
+            <dt>Moves</dt>
+            <dd id="won-moves">0</dd>
+          </div>
+          <div>
+            <dt id="won-best-label">Best</dt>
+            <dd id="won-best">—</dd>
+          </div>
+        </dl>
+        <div class="won-actions">
+          <button type="button" class="ctl ctl-go" id="btn-again">Deal again</button>
+          <button type="button" class="ctl" id="btn-won-replay">Replay this hand</button>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <h3 class="sheet-title">Deal</h3>
-  <div class="sheet-row">
-    <span class="sheet-label">Number</span>
-    <span class="sheet-value" id="deal-num">—</span>
-  </div>
-  <div class="sheet-actions">
-    <button type="button" class="ctl" id="btn-copy">Copy link</button>
-    <button type="button" class="ctl" id="btn-replay">Replay it</button>
-  </div>
-
-  <h3 class="sheet-title">Today's deal</h3>
-  <dl class="sheet-stats">
-    <div><dt>State</dt><dd id="daily-state">Open</dd></div>
-    <div><dt>Streak</dt><dd id="daily-streak">0</dd></div>
-    <div><dt>Best run</dt><dd id="daily-best">0</dd></div>
-  </dl>
-  <button type="button" class="ctl sheet-wide" id="btn-daily">Play today's deal</button>
-
-  <h3 class="sheet-title">Record</h3>
-  <dl class="sheet-stats">
-    <div><dt>Played</dt><dd id="rec-played">0</dd></div>
-    <div><dt>Won</dt><dd id="rec-won">0</dd></div>
-    <div><dt>Rate</dt><dd id="rec-rate">—</dd></div>
-    <div><dt>Streak</dt><dd id="rec-streak">0</dd></div>
-    <div><dt>Best run</dt><dd id="rec-best-streak">0</dd></div>
-    <div><dt>Best time</dt><dd id="rec-best-time">—</dd></div>
-    <div><dt>Best moves</dt><dd id="rec-best-moves">—</dd></div>
-  </dl>
-
-  <button type="button" class="ctl sheet-done" id="btn-sheet-done">Done</button>
-</section>
-
-<div class="curtain" id="stuck" hidden>
-  <div class="won" role="dialog" aria-modal="true" aria-labelledby="stuck-title">
-    <h2 id="stuck-title">Nothing left to play.</h2>
-    <p class="stuck-note">No card on the table can move, and nothing left in the
-      stock fits anywhere. Undo is still open if you want to try another line.</p>
-    <div class="won-actions">
-      <button type="button" class="ctl ctl-go" id="btn-stuck-new">New deal</button>
-      <button type="button" class="ctl" id="btn-stuck-replay">Replay this hand</button>
-      <button type="button" class="ctl" id="btn-stuck-stay">Keep looking</button>
-    </div>
-  </div>
-</div>
-
-<p class="sr-only" role="status" aria-live="polite" id="announce"></p>
-
-<div class="curtain" id="curtain" hidden>
-  <div class="won" role="dialog" aria-modal="true" aria-labelledby="won-title">
-    <span class="won-mark" aria-hidden="true"></span>
-    <h2 id="won-title">All fifty-two home.</h2>
-    <dl class="won-stats">
-      <div><dt>Time</dt><dd id="won-time">0:00</dd></div>
-      <div><dt>Moves</dt><dd id="won-moves">0</dd></div>
-      <div><dt id="won-best-label">Best</dt><dd id="won-best">—</dd></div>
-    </dl>
-    <div class="won-actions">
-      <button type="button" class="ctl ctl-go" id="btn-again">Deal again</button>
-      <button type="button" class="ctl" id="btn-won-replay">Replay this hand</button>
-    </div>
-  </div>
-</div>
-
-<script type="module" src="js/solitaire.js"></script>
-</body>
+    <script type="module" src="js/solitaire.js"></script>
+  </body>
 </html>

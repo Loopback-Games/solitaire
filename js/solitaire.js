@@ -21,69 +21,72 @@ const COURT = { 11: 'J', 12: 'Q', 13: 'K' };
 
 const suitOf = (id) => (id / 13) | 0;
 const rankOf = (id) => (id % 13) + 1;
-const isRed  = (id) => suitOf(id) === 1 || suitOf(id) === 2;
+const isRed = (id) => suitOf(id) === 1 || suitOf(id) === 2;
 
 const TABLEAU = ['t0', 't1', 't2', 't3', 't4', 't5', 't6'];
-const FOUNDS  = ['f0', 'f1', 'f2', 'f3'];
-const KEYS    = ['stock', 'waste', ...FOUNDS, ...TABLEAU];
+const FOUNDS = ['f0', 'f1', 'f2', 'f3'];
+const KEYS = ['stock', 'waste', ...FOUNDS, ...TABLEAU];
 
 /* ---------------------------------------------------------------- dom --- */
 
 const $ = (sel) => document.querySelector(sel);
 
 const piles = {};
-KEYS.forEach((k) => { piles[k] = document.querySelector(`[data-pile="${k}"]`); });
+KEYS.forEach((k) => {
+  piles[k] = document.querySelector(`[data-pile="${k}"]`);
+});
 
 const el = {
-  board:     $('#board'),
-  time:      $('#stat-time'),
-  moves:     $('#stat-moves'),
-  wins:      $('#stat-wins'),
-  count:     $('#stock-count'),
-  undo:      $('#btn-undo'),
-  redo:      $('#btn-redo'),
-  hint:      $('#btn-hint'),
-  auto:      $('#btn-auto'),
-  stuck:     $('#stuck'),
-  more:      $('#btn-more'),
-  sheet:     $('#sheet'),
-  veil:      $('#sheet-veil'),
-  done:      $('#btn-sheet-done'),
-  copy:      $('#btn-copy'),
-  replay:    $('#btn-replay'),
-  daily:     $('#btn-daily'),
-  dealNum:   $('#deal-num'),
+  board: $('#board'),
+  time: $('#stat-time'),
+  moves: $('#stat-moves'),
+  wins: $('#stat-wins'),
+  count: $('#stock-count'),
+  undo: $('#btn-undo'),
+  redo: $('#btn-redo'),
+  hint: $('#btn-hint'),
+  auto: $('#btn-auto'),
+  stuck: $('#stuck'),
+  more: $('#btn-more'),
+  sheet: $('#sheet'),
+  veil: $('#sheet-veil'),
+  done: $('#btn-sheet-done'),
+  copy: $('#btn-copy'),
+  replay: $('#btn-replay'),
+  daily: $('#btn-daily'),
+  dealNum: $('#deal-num'),
   bestLabel: $('#won-best-label'),
-  curtain:   $('#curtain'),
-  wonTime:   $('#won-time'),
-  wonMoves:  $('#won-moves'),
-  wonBest:   $('#won-best'),
-  announce:  $('#announce'),
+  curtain: $('#curtain'),
+  wonTime: $('#won-time'),
+  wonMoves: $('#won-moves'),
+  wonBest: $('#won-best'),
+  announce: $('#announce'),
 };
 
 const segs = [...document.querySelectorAll('[data-draw]')];
 const soundSegs = [...document.querySelectorAll('[data-sound]')];
 const dailyView = {
-  state:  $('#daily-state'),
+  state: $('#daily-state'),
   streak: $('#daily-streak'),
-  best:   $('#daily-best'),
+  best: $('#daily-best'),
 };
 
 const record = {
-  played:     $('#rec-played'),
-  won:        $('#rec-won'),
-  rate:       $('#rec-rate'),
-  streak:     $('#rec-streak'),
+  played: $('#rec-played'),
+  won: $('#rec-won'),
+  rate: $('#rec-rate'),
+  streak: $('#rec-streak'),
   bestStreak: $('#rec-best-streak'),
-  bestTime:   $('#rec-best-time'),
-  bestMoves:  $('#rec-best-moves'),
+  bestTime: $('#rec-best-time'),
+  bestMoves: $('#rec-best-moves'),
 };
 
 // One element per card, built once and re-parented forever after.
 const cards = Array.from({ length: 52 }, (_, id) => build(id));
 
 function build(id) {
-  const rank = rankOf(id), suit = suitOf(id);
+  const rank = rankOf(id),
+    suit = suitOf(id);
   const node = document.createElement('button');
   node.type = 'button';
   node.className = 'card';
@@ -99,13 +102,16 @@ function build(id) {
   } else if (rank > 10) {
     art = `<span class="art-court"><b>${COURT[rank]}</b><i>${SUITS[suit]}</i></span>`;
   } else {
-    art = `<span class="art-pips" data-rank="${rank}">` +
-          `<span>${SUITS[suit]}</span>`.repeat(rank) + `</span>` +
-          `<span class="art-big"><b>${RANKS[rank]}</b><i>${SUITS[suit]}</i></span>`;
+    art =
+      `<span class="art-pips" data-rank="${rank}">` +
+      `<span>${SUITS[suit]}</span>`.repeat(rank) +
+      `</span>` +
+      `<span class="art-big"><b>${RANKS[rank]}</b><i>${SUITS[suit]}</i></span>`;
   }
 
-  const index = `<span class="idx"><span class="rank">${RANKS[rank]}</span>` +
-                `<span class="pip">${SUITS[suit]}</span></span>`;
+  const index =
+    `<span class="idx"><span class="rank">${RANKS[rank]}</span>` +
+    `<span class="pip">${SUITS[suit]}</span></span>`;
 
   node.innerHTML =
     `<span class="face">${index}<span class="art">${art}</span>` +
@@ -114,7 +120,8 @@ function build(id) {
   return node;
 }
 
-const name = (id) => `${RANKS[rankOf(id)]} of ${['spades','hearts','diamonds','clubs'][suitOf(id)]}`;
+const name = (id) =>
+  `${RANKS[rankOf(id)]} of ${['spades', 'hearts', 'diamonds', 'clubs'][suitOf(id)]}`;
 
 /* -------------------------------------------------------------- state --- */
 
@@ -122,14 +129,21 @@ const name = (id) => `${RANKS[rankOf(id)]} of ${['spades','hearts','diamonds','c
 // module-level binding that shadows it turns window.history into an array of
 // board snapshots the moment anything in here reaches for replaceState.
 let s, undos, redo, sel, timer, autoTimer, startedAt, elapsed;
-let drag = null, swallowClick = false, curtainTimer = null;
+let drag = null,
+  swallowClick = false,
+  curtainTimer = null;
 
 // The number that produced the hand on the table, and whether that hand has
 // been counted as played — a resumed game must not be counted a second time.
-let dealSeed = 0, counted = false, isDaily = false;
+let dealSeed = 0,
+  counted = false,
+  isDaily = false;
 // The move currently being pointed at, how far down the ranked list the player
 // has pressed, and whether this hand has already been called dead.
-let hint = null, hintAt = 0, hintTimer = null, stuckShown = false;
+let hint = null,
+  hintAt = 0,
+  hintTimer = null,
+  stuckShown = false;
 
 let drawN = read().prefs.drawN === 3 ? 3 : 1;
 let sound = read().prefs.sound === true;
@@ -137,7 +151,7 @@ let sound = read().prefs.sound === true;
 function fresh(seed = newSeed(), daily = false) {
   // Restarting today's puzzle is the same as walking every move back, so it
   // does not spend the day. Anything else retires the hand on the table.
-  const sameDaily = daily && isDaily && (seed >>> 0) === dealSeed;
+  const sameDaily = daily && isDaily && seed >>> 0 === dealSeed;
   if (!sameDaily) abandon();
   isDaily = daily;
   dealSeed = seed >>> 0;
@@ -150,7 +164,9 @@ function fresh(seed = newSeed(), daily = false) {
   }
 
   s = { up: new Array(52).fill(false), moves: 0 };
-  KEYS.forEach((k) => { s[k] = []; });
+  KEYS.forEach((k) => {
+    s[k] = [];
+  });
 
   for (let col = 0; col < 7; col++) {
     for (let row = 0; row <= col; row++) {
@@ -194,12 +210,13 @@ function fresh(seed = newSeed(), daily = false) {
  *
  * mulberry32 — small, fast, and good enough to shuffle a deck with. */
 function mulberry32(n) {
-  let a = (n >>> 0) + 0x6D2B79F5;
+  let a = (n >>> 0) + 0x6d2b79f5;
   return (max) => {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return (((t ^ (t >>> 14)) >>> 0) / 4294967296 * max) | 0;
+    return ((((t ^ (t >>> 14)) >>> 0) / 4294967296) * max) | 0;
   };
 }
 
@@ -210,8 +227,9 @@ function mulberry32(n) {
 function disown() {
   const query = new URLSearchParams(location.search);
   const named = Number.parseInt(query.get('deal'), 10);
-  const stale = (query.has('deal') && (!Number.isFinite(named) || (named >>> 0) !== dealSeed))
-             || (query.has('daily') && !isDaily);
+  const stale =
+    (query.has('deal') && (!Number.isFinite(named) || named >>> 0 !== dealSeed)) ||
+    (query.has('daily') && !isDaily);
   if (!stale) return;
 
   query.delete('deal');
@@ -248,7 +266,9 @@ function apply(shot) {
   stuckShown = false;
   s.up = shot.up;
   s.moves = shot.moves;
-  KEYS.forEach((k, i) => { s[k] = shot.piles[i]; });
+  KEYS.forEach((k, i) => {
+    s[k] = shot.piles[i];
+  });
   sel = null;
   render();
 }
@@ -302,7 +322,9 @@ function restore(g) {
   isDaily = !!g.isDaily;
 
   s = { up: g.current.up, moves: g.current.moves };
-  KEYS.forEach((k, i) => { s[k] = g.current.piles[i]; });
+  KEYS.forEach((k, i) => {
+    s[k] = g.current.piles[i];
+  });
   undos = Array.isArray(g.history) ? g.history : [];
   redo = Array.isArray(g.redo) ? g.redo : [];
   elapsed = Number(g.elapsed) || 0;
@@ -356,7 +378,8 @@ function intact(g) {
  * walk it back as far as you like, but you get one shuffle: a streak you can
  * retry into is not a streak. */
 
-const stamp = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const stamp = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 // Local midnight, not UTC — the puzzle should turn over on the player's day.
 const today = () => stamp(new Date());
@@ -396,7 +419,9 @@ function settleDaily(result) {
 
   if (result === 'won') {
     const streak = d.streak + 1;
-    write({ daily: { ...d, result: 'won', streak, bestStreak: Math.max(streak, d.bestStreak) } });
+    write({
+      daily: { ...d, result: 'won', streak, bestStreak: Math.max(streak, d.bestStreak) },
+    });
   } else {
     write({ daily: { ...d, result: 'lost', streak: 0 } });
   }
@@ -420,7 +445,10 @@ function begin() {
  * as played, so a loss needs no column of its own: it is played minus won. */
 function abandon() {
   if (!counted || won()) return;
-  if (isDaily) { settleDaily('lost'); return; }
+  if (isDaily) {
+    settleDaily('lost');
+    return;
+  }
   write({ stats: { ...read().stats, streak: 0 } });
 }
 
@@ -439,7 +467,8 @@ function fitsTableau(id, k) {
   return s.up[t] && rankOf(id) === rankOf(t) - 1 && isRed(id) !== isRed(t);
 }
 
-const fits = (id, k) => (FOUNDS.includes(k) ? fitsFoundation(id, k) : TABLEAU.includes(k) && fitsTableau(id, k));
+const fits = (id, k) =>
+  FOUNDS.includes(k) ? fitsFoundation(id, k) : TABLEAU.includes(k) && fitsTableau(id, k);
 
 // A tableau card can be lifted only with every card resting on it, and only
 // if that whole run already descends in alternating colours.
@@ -447,7 +476,8 @@ function liftable(k, from) {
   const pile = s[k];
   if (!s.up[pile[from]]) return false;
   for (let i = from; i < pile.length - 1; i++) {
-    const a = pile[i], b = pile[i + 1];
+    const a = pile[i],
+      b = pile[i + 1];
     if (!s.up[b] || rankOf(b) !== rankOf(a) - 1 || isRed(a) === isRed(b)) return false;
   }
   return true;
@@ -474,7 +504,10 @@ function move(from, at, to) {
 function reveal(k) {
   if (!TABLEAU.includes(k)) return;
   const t = top(k);
-  if (t !== undefined && !s.up[t]) { s.up[t] = true; sfx.flip(); }
+  if (t !== undefined && !s.up[t]) {
+    s.up[t] = true;
+    sfx.flip();
+  }
 }
 
 function deal() {
@@ -491,7 +524,9 @@ function deal() {
   } else if (s.waste.length) {
     s.stock = s.waste.reverse();
     s.waste = [];
-    s.stock.forEach((id) => { s.up[id] = false; });
+    s.stock.forEach((id) => {
+      s.up[id] = false;
+    });
     sfx.deal();
     say('Stock refilled.');
   } else {
@@ -529,7 +564,8 @@ function place(target) {
   sel = null;
   const home = FOUNDS.includes(target);
   render({ home: home ? target : null });
-  if (home) sfx.home(); else sfx.place();
+  if (home) sfx.home();
+  else sfx.place();
   say(`${name(run[0])} moved.`);
   finish();
   checkStuck();
@@ -569,7 +605,10 @@ function autoStep() {
       return true;
     }
   }
-  if (s.stock.length || s.waste.length) { deal(); return true; }
+  if (s.stock.length || s.waste.length) {
+    deal();
+    return true;
+  }
   return false;
 }
 
@@ -578,11 +617,18 @@ function startAuto() {
   sel = null;
   let idle = 0;
   autoTimer = setInterval(() => {
-    if (won()) { stopAuto(); finish(); return; }
+    if (won()) {
+      stopAuto();
+      finish();
+      return;
+    }
     // Dealing alone is not progress; if a full pass round the stock moves
     // nothing to a foundation, there is nothing left to do automatically.
     const before = FOUNDS.reduce((n, k) => n + s[k].length, 0);
-    if (!autoStep()) { stopAuto(); return; }
+    if (!autoStep()) {
+      stopAuto();
+      return;
+    }
     const after = FOUNDS.reduce((n, k) => n + s[k].length, 0);
     idle = after > before ? 0 : idle + 1;
     if (idle > s.stock.length + s.waste.length + 2) stopAuto();
@@ -653,7 +699,10 @@ function cascade() {
       const box = node.getBoundingClientRect();
       const left = c.col % 2 === 0;
       node.style.setProperty('--fh', `${Math.round(floor - box.bottom)}px`);
-      node.style.setProperty('--fx', `${Math.round(left ? -(box.right + 160) : innerWidth - box.left + 160)}px`);
+      node.style.setProperty(
+        '--fx',
+        `${Math.round(left ? -(box.right + 160) : innerWidth - box.left + 160)}px`,
+      );
       node.style.setProperty('--fr', `${(left ? -1 : 1) * (200 + (c.depth % 4) * 130)}deg`);
       node.style.setProperty('--fd', `${(n * 0.045).toFixed(2)}s`);
       node.classList.add('is-falling');
@@ -689,7 +738,9 @@ function stopTimer() {
   timer = null;
 }
 
-const say = (msg) => { el.announce.textContent = msg; };
+const say = (msg) => {
+  el.announce.textContent = msg;
+};
 
 /* ------------------------------------------------------------ render --- */
 
@@ -828,7 +879,11 @@ function showHint() {
   hint = list[step % list.length];
   hintAt = step + 1;
   render();
-  hintTimer = setTimeout(() => { hint = null; hintTimer = null; render(); }, 3600);
+  hintTimer = setTimeout(() => {
+    hint = null;
+    hintTimer = null;
+    render();
+  }, 3600);
 
   say(hint.deal ? 'Turn the stock.' : `Try the ${name(s[hint.from][hint.at])}.`);
 }
@@ -845,10 +900,23 @@ function checkStuck() {
   say('No moves left.');
 }
 
-el.hint.addEventListener('click', () => { stopAuto(); showHint(); });
-$('#btn-stuck-new').addEventListener('click', () => { el.stuck.hidden = true; fresh(); say('New deal.'); });
-$('#btn-stuck-replay').addEventListener('click', () => { el.stuck.hidden = true; fresh(dealSeed, isDaily); say('Same hand again.'); });
-$('#btn-stuck-stay').addEventListener('click', () => { el.stuck.hidden = true; });
+el.hint.addEventListener('click', () => {
+  stopAuto();
+  showHint();
+});
+$('#btn-stuck-new').addEventListener('click', () => {
+  el.stuck.hidden = true;
+  fresh();
+  say('New deal.');
+});
+$('#btn-stuck-replay').addEventListener('click', () => {
+  el.stuck.hidden = true;
+  fresh(dealSeed, isDaily);
+  say('Same hand again.');
+});
+$('#btn-stuck-stay').addEventListener('click', () => {
+  el.stuck.hidden = true;
+});
 
 /* -------------------------------------------------------------- sheet --- */
 
@@ -899,7 +967,8 @@ function paintDaily() {
   dailyView.state.textContent = DAILY_STATE[d.result] || 'Open';
   dailyView.streak.textContent = d.streak;
   dailyView.best.textContent = d.bestStreak;
-  el.daily.textContent = d.result === 'playing' ? 'Play today\u2019s deal' : 'Replay today\u2019s deal';
+  el.daily.textContent =
+    d.result === 'playing' ? 'Play today\u2019s deal' : 'Replay today\u2019s deal';
 }
 
 const shareLink = () => `${location.origin}${location.pathname}?deal=${dealSeed}`;
@@ -915,7 +984,11 @@ function oldCopy(text) {
   document.body.append(field);
   field.select();
   let ok = false;
-  try { ok = document.execCommand('copy'); } catch { ok = false; }
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  }
   field.remove();
   return ok;
 }
@@ -931,7 +1004,9 @@ async function copyLink() {
   }
   el.copy.textContent = ok ? 'Copied' : 'Copy failed';
   say(ok ? 'Link copied.' : 'Could not reach the clipboard.');
-  setTimeout(() => { el.copy.textContent = 'Copy link'; }, 1600);
+  setTimeout(() => {
+    el.copy.textContent = 'Copy link';
+  }, 1600);
 }
 
 function paintDraw() {
@@ -939,7 +1014,9 @@ function paintDraw() {
 }
 
 function paintSound() {
-  soundSegs.forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.sound === 'on') === sound)));
+  soundSegs.forEach((b) =>
+    b.setAttribute('aria-pressed', String((b.dataset.sound === 'on') === sound)),
+  );
 }
 
 function setSound(want) {
@@ -968,14 +1045,25 @@ el.more.addEventListener('click', showSheet);
 el.done.addEventListener('click', hideSheet);
 el.veil.addEventListener('click', hideSheet);
 el.copy.addEventListener('click', copyLink);
-el.replay.addEventListener('click', () => { hideSheet(); fresh(dealSeed, isDaily); say('Same hand again.'); });
-el.daily.addEventListener('click', () => { hideSheet(); fresh(dailySeed(today()), true); say('Today\u2019s deal.'); });
+el.replay.addEventListener('click', () => {
+  hideSheet();
+  fresh(dealSeed, isDaily);
+  say('Same hand again.');
+});
+el.daily.addEventListener('click', () => {
+  hideSheet();
+  fresh(dailySeed(today()), true);
+  say('Today\u2019s deal.');
+});
 segs.forEach((b) => b.addEventListener('click', () => setDraw(Number(b.dataset.draw))));
 soundSegs.forEach((b) => b.addEventListener('click', () => setSound(b.dataset.sound === 'on')));
 
 // The sheet is modal, so focus stays inside it until it is dismissed.
 el.sheet.addEventListener('keydown', (ev) => {
-  if (ev.key === 'Escape') { hideSheet(); return; }
+  if (ev.key === 'Escape') {
+    hideSheet();
+    return;
+  }
   if (ev.key !== 'Tab') return;
   const stops = [...el.sheet.querySelectorAll('button')];
   const edge = ev.shiftKey ? stops[0] : stops[stops.length - 1];
@@ -1002,7 +1090,12 @@ el.board.addEventListener('pointerdown', (ev) => {
   if (at < 0 || !movable(key, at)) return;
 
   drag = {
-    key, at, id, x: ev.clientX, y: ev.clientY, live: false,
+    key,
+    at,
+    id,
+    x: ev.clientX,
+    y: ev.clientY,
+    live: false,
     run: s[key].slice(at).map((n) => cards[n]),
   };
 });
@@ -1087,11 +1180,15 @@ function snap(nodes, from) {
     node.style.setProperty('--dx', '0px');
     node.style.setProperty('--dy', '0px');
   });
-  setTimeout(() => moved.forEach((node) => {
-    node.classList.remove('is-snapping');
-    node.style.removeProperty('--dx');
-    node.style.removeProperty('--dy');
-  }), 380);
+  setTimeout(
+    () =>
+      moved.forEach((node) => {
+        node.classList.remove('is-snapping');
+        node.style.removeProperty('--dx');
+        node.style.removeProperty('--dy');
+      }),
+    380,
+  );
 }
 
 addEventListener('pointerup', () => endDrag(true));
@@ -1102,19 +1199,25 @@ addEventListener('pointercancel', () => endDrag(false));
 function landing(node) {
   const card = node.getBoundingClientRect();
   const tall = piles.waste.getBoundingClientRect().height;
-  let best = null, most = 0;
+  let best = null,
+    most = 0;
 
   for (const k of KEYS) {
     if (!canDrop(k)) continue;
     const stack = s[k];
     const box = stack.length
       ? cards[stack[stack.length - 1]].getBoundingClientRect()
-      : (() => { const p = piles[k].getBoundingClientRect();
-                 return { left: p.left, right: p.right, top: p.top, bottom: p.top + tall }; })();
+      : (() => {
+          const p = piles[k].getBoundingClientRect();
+          return { left: p.left, right: p.right, top: p.top, bottom: p.top + tall };
+        })();
 
     const w = Math.min(card.right, box.right) - Math.max(card.left, box.left);
     const h = Math.min(card.bottom, box.bottom) - Math.max(card.top, box.top);
-    if (w > 0 && h > 0 && w * h > most) { most = w * h; best = k; }
+    if (w > 0 && h > 0 && w * h > most) {
+      most = w * h;
+      best = k;
+    }
   }
   return best;
 }
@@ -1122,23 +1225,35 @@ function landing(node) {
 /* ------------------------------------------------------------- input --- */
 
 el.board.addEventListener('click', (ev) => {
-  if (swallowClick) { swallowClick = false; return; }
+  if (swallowClick) {
+    swallowClick = false;
+    return;
+  }
   const host = ev.target.closest('.pile');
   if (!host) return;
   const key = host.dataset.pile;
   const node = ev.target.closest('.card');
   const id = node ? Number(node.dataset.id) : null;
 
-  if (key === 'stock') { stopAuto(); deal(); return; }
+  if (key === 'stock') {
+    stopAuto();
+    deal();
+    return;
+  }
   stopAuto();
 
   // A second click on the same card puts it back down.
   if (sel && id !== null && sel.from === key && s[key].indexOf(id) === sel.at) {
-    sel = null; render(); return;
+    sel = null;
+    render();
+    return;
   }
   if (sel && place(key)) return;
   if (id !== null && pick(key, id)) return;
-  if (sel) { sel = null; render(); }
+  if (sel) {
+    sel = null;
+    render();
+  }
 });
 
 el.board.addEventListener('dblclick', (ev) => {
@@ -1159,16 +1274,28 @@ el.board.addEventListener('keydown', (ev) => {
 });
 
 document.addEventListener('click', (ev) => {
-  if (sel && !ev.target.closest('.pile')) { sel = null; render(); }
+  if (sel && !ev.target.closest('.pile')) {
+    sel = null;
+    render();
+  }
 });
 
 document.addEventListener('pointerdown', () => {
   if (document.body.classList.contains('is-won') && el.curtain.hidden) showWon(0);
 });
 
-$('#btn-new').addEventListener('click', () => { fresh(); say('New deal.'); });
-$('#btn-again').addEventListener('click', () => { fresh(); say('New deal.'); });
-$('#btn-won-replay').addEventListener('click', () => { fresh(dealSeed, isDaily); say('Same hand again.'); });
+$('#btn-new').addEventListener('click', () => {
+  fresh();
+  say('New deal.');
+});
+$('#btn-again').addEventListener('click', () => {
+  fresh();
+  say('New deal.');
+});
+$('#btn-won-replay').addEventListener('click', () => {
+  fresh(dealSeed, isDaily);
+  say('Same hand again.');
+});
 el.undo.addEventListener('click', undo);
 el.redo.addEventListener('click', redoMove);
 el.auto.addEventListener('click', startAuto);
@@ -1178,7 +1305,10 @@ document.addEventListener('keydown', (ev) => {
   // itself, and the stuck panel only ever needs a way out.
   if (sheetOpen()) return;
   if (stuckOpen()) {
-    if (ev.key === 'Escape') { el.stuck.hidden = true; ev.preventDefault(); }
+    if (ev.key === 'Escape') {
+      el.stuck.hidden = true;
+      ev.preventDefault();
+    }
     return;
   }
   const k = ev.key.toLowerCase();
@@ -1194,8 +1324,10 @@ document.addEventListener('keydown', (ev) => {
   }
   if (ev.altKey) return;
 
-  if (k === 'escape' && sel) { sel = null; render(); }
-  else if (k === 'u') undo();
+  if (k === 'escape' && sel) {
+    sel = null;
+    render();
+  } else if (k === 'u') undo();
   else if (k === 'r') redoMove();
   else if (k === 'n') fresh();
   else if (k === 'd') setDraw(drawN === 1 ? 3 : 1);

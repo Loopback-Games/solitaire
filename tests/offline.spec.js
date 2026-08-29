@@ -12,9 +12,12 @@ test.afterEach(async ({ page }) => {
   expect(page.problems, 'the page logged no errors').toEqual([]);
 });
 
-const claimed = (page) => page.waitForFunction(
-  () => navigator.serviceWorker && navigator.serviceWorker.controller !== null,
-  null, { timeout: 10000 });
+const claimed = (page) =>
+  page.waitForFunction(
+    () => navigator.serviceWorker && navigator.serviceWorker.controller !== null,
+    null,
+    { timeout: 10000 },
+  );
 
 test('the worker takes over the page it was registered from', async ({ page }) => {
   await page.goto(DEAL);
@@ -26,8 +29,16 @@ test('the worker takes over the page it was registered from', async ({ page }) =
     return keys.map((r) => new URL(r.url).pathname.replace(/^.*\//, '')).sort();
   });
   // The shell is there: the page, the stylesheet, and every module it imports.
-  expect(cached).toEqual(expect.arrayContaining(
-    ['solitaire.js', 'store.js', 'hint.js', 'sfx.js', 'keys.js', 'solitaire.css']));
+  expect(cached).toEqual(
+    expect.arrayContaining([
+      'solitaire.js',
+      'store.js',
+      'hint.js',
+      'sfx.js',
+      'keys.js',
+      'solitaire.css',
+    ]),
+  );
 });
 
 test('an installed copy still deals with nothing behind it', async ({ page, context }) => {
