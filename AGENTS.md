@@ -37,6 +37,17 @@ browsers otherwise, and the failure is total rather than a warning.
 
 Bump the image tag, its digest and the npm package in one commit.
 
+## Formatting
+
+Prettier, pinned in `devDependencies`. `.github/` is excluded on purpose —
+`yamllint --strict` wants two spaces before an inline comment and prettier
+collapses them to one, so the workflows belong to the tool that also validates
+them.
+
+There is no ESLint. `just lint-js` parses every module with
+`node --input-type=module --check`, which is the check that matters in a
+repository shipping hand-written ES modules with no build step.
+
 ## Actions
 
 Pinned by commit SHA with the version in a trailing comment. Resolve a SHA with
