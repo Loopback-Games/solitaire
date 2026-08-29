@@ -9,10 +9,16 @@
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-# mise's shims, so every recipe works in a shell that has not activated mise.
-# A devcontainer runs plenty of non-interactive shells and none of them source
-# a profile.
-export PATH := env("HOME") / ".local/share/mise/shims" + ":" + env("PATH")
+# The project's own binaries first, then mise's shims. `prettier` here is the
+# one in package-lock.json rather than whatever the machine has globally — and
+# without node_modules/.bin on this line it is not found at all, which is how
+# `just lint` passed on a laptop that had prettier elsewhere and failed in CI.
+# The shims mean every recipe works in a shell that has not activated mise, and
+# a devcontainer runs plenty of those.
+#
+# The parentheses matter: `/` and `+` share a precedence level in just and
+# associate left.
+export PATH := justfile_directory() / "node_modules/.bin" + ":" + (env("HOME") / ".local/share/mise/shims") + ":" + env("PATH")
 
 # The files the site is actually made of. Everything else in the repository is
 # how it gets built and checked, and has no business on a public web server.
