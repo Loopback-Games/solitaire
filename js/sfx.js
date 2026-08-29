@@ -18,7 +18,10 @@ function wake() {
   if (!on) return null;
   if (!ctx) {
     const Ctor = window.AudioContext || window.webkitAudioContext;
-    if (!Ctor) { on = false; return null; }
+    if (!Ctor) {
+      on = false;
+      return null;
+    }
     ctx = new Ctor();
     // A fifth of a second of white noise, reused by every card sound there is.
     const len = Math.floor(ctx.sampleRate * 0.2);
@@ -86,13 +89,18 @@ export function enable(want) {
  * arrive in the same place. */
 export const sfx = {
   place: () => burst({ freq: 1150, dur: 0.075 }),
-  deal:  () => burst({ freq: 2100, dur: 0.05, gain: 0.26 }),
-  flip:  () => burst({ freq: 820, dur: 0.055, gain: 0.26 }),
-  nope:  () => burst({ freq: 240, dur: 0.1, gain: 0.9, q: 1.6 }),
-  home:  () => { burst({ freq: 1500, dur: 0.05, gain: 0.24 }); tone({ freq: 880, dur: 0.24 }); },
+  deal: () => burst({ freq: 2100, dur: 0.05, gain: 0.26 }),
+  flip: () => burst({ freq: 820, dur: 0.055, gain: 0.26 }),
+  nope: () => burst({ freq: 240, dur: 0.1, gain: 0.9, q: 1.6 }),
+  home: () => {
+    burst({ freq: 1500, dur: 0.05, gain: 0.24 });
+    tone({ freq: 880, dur: 0.24 });
+  },
   // C major, straight up, one card per note.
-  win:   () => [523.25, 659.25, 783.99, 1046.5]
-    .forEach((freq, i) => tone({ freq, at: i * 0.11, dur: 0.55, gain: 0.17 })),
+  win: () =>
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) =>
+      tone({ freq, at: i * 0.11, dur: 0.55, gain: 0.17 }),
+    ),
 };
 
 // A backgrounded tab has its context suspended out from under it.

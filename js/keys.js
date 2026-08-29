@@ -13,7 +13,9 @@
 export function mountKeys({ board, piles, rows }) {
   // Which row, which pile along it, and how far up the fan — counted from the
   // last card back, because the last card is the one you normally want.
-  let row = 1, col = 0, depth = 0;
+  let row = 1,
+    col = 0,
+    depth = 0;
   let held = false;
   // The element currently carrying the board's only 0. Moving the cursor does
   // not re-render, so the one it leaves has to be stood down by hand.
@@ -52,7 +54,10 @@ export function mountKeys({ board, piles, rows }) {
     return target;
   }
 
-  const step = () => { held = true; refresh().focus({ preventScroll: true }); };
+  const step = () => {
+    held = true;
+    refresh().focus({ preventScroll: true });
+  };
 
   function across(by) {
     col = (clampCol(row, col) + by + rows[row].length) % rows[row].length;
@@ -65,24 +70,41 @@ export function mountKeys({ board, piles, rows }) {
   // bottom you can feel.
   function up() {
     if (row === 1 && depth < reach(keyAt(row, col)) - 1) depth += 1;
-    else if (row > 0) { row -= 1; depth = 0; col = clampCol(row, col); }
+    else if (row > 0) {
+      row -= 1;
+      depth = 0;
+      col = clampCol(row, col);
+    }
     step();
   }
 
   function down() {
     if (row === 1 && depth > 0) depth -= 1;
-    else if (row < rows.length - 1) { row += 1; depth = 0; col = clampCol(row, col); }
+    else if (row < rows.length - 1) {
+      row += 1;
+      depth = 0;
+      col = clampCol(row, col);
+    }
     step();
   }
 
   board.addEventListener('keydown', (ev) => {
     if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
     switch (ev.key) {
-      case 'ArrowLeft':  across(-1); break;
-      case 'ArrowRight': across(1); break;
-      case 'ArrowUp':    up(); break;
-      case 'ArrowDown':  down(); break;
-      default: return;
+      case 'ArrowLeft':
+        across(-1);
+        break;
+      case 'ArrowRight':
+        across(1);
+        break;
+      case 'ArrowUp':
+        up();
+        break;
+      case 'ArrowDown':
+        down();
+        break;
+      default:
+        return;
     }
     ev.preventDefault();
   });

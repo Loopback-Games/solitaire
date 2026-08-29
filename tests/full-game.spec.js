@@ -28,11 +28,13 @@ function nextMove(st) {
   const top = (k) => (st.p[k].length ? st.p[k][st.p[k].length - 1] : null);
   const home = (i) => st.p[F[i]].length;
   // Only send a card home when the other colour cannot still need it.
-  const safe = (id) => rank(id) <= 2 || (red(id) ? [0, 3] : [1, 2]).every((i) => home(i) >= rank(id) - 1);
+  const safe = (id) =>
+    rank(id) <= 2 || (red(id) ? [0, 3] : [1, 2]).every((i) => home(i) >= rank(id) - 1);
 
   for (const k of [...T, 'waste']) {
     const c = top(k);
-    if (c?.up && home(suit(c.id)) === rank(c.id) - 1 && safe(c.id)) return { from: k, id: c.id, to: F[suit(c.id)] };
+    if (c?.up && home(suit(c.id)) === rank(c.id) - 1 && safe(c.id))
+      return { from: k, id: c.id, to: F[suit(c.id)] };
   }
   for (const k of T) {
     const at = st.p[k].findIndex((c) => c.up);
@@ -40,7 +42,8 @@ function nextMove(st) {
     const c = st.p[k][at];
     for (const d of T) {
       const t = d === k ? null : top(d);
-      if (t?.up && rank(c.id) === rank(t.id) - 1 && red(c.id) !== red(t.id)) return { from: k, id: c.id, to: d };
+      if (t?.up && rank(c.id) === rank(t.id) - 1 && red(c.id) !== red(t.id))
+        return { from: k, id: c.id, to: d };
     }
   }
   for (const k of T) {
@@ -58,13 +61,15 @@ function nextMove(st) {
   if (w) {
     for (const d of T) {
       const t = top(d);
-      if (t?.up && rank(w.id) === rank(t.id) - 1 && red(w.id) !== red(t.id)) return { from: 'waste', id: w.id, to: d };
+      if (t?.up && rank(w.id) === rank(t.id) - 1 && red(w.id) !== red(t.id))
+        return { from: 'waste', id: w.id, to: d };
     }
   }
   // Last resort: send anything that fits home, safe or not.
   for (const k of [...T, 'waste']) {
     const c = top(k);
-    if (c?.up && home(suit(c.id)) === rank(c.id) - 1) return { from: k, id: c.id, to: F[suit(c.id)] };
+    if (c?.up && home(suit(c.id)) === rank(c.id) - 1)
+      return { from: k, id: c.id, to: F[suit(c.id)] };
   }
   return null;
 }
@@ -85,10 +90,16 @@ test('deal 7 can be played all the way to a win', async ({ page }, testInfo) => 
     const mv = nextMove(st);
     if (mv) {
       // A fanned card only exposes a strip at the top; click there, as a player would.
-      await page.click(`[data-pile="${mv.from}"] .card[data-id="${mv.id}"]`, { position: { x: 14, y: 6 } });
+      await page.click(`[data-pile="${mv.from}"] .card[data-id="${mv.id}"]`, {
+        position: { x: 14, y: 6 },
+      });
       const dest = page.locator(`[data-pile="${mv.to}"]`);
       const stacked = await dest.locator('.card').count();
-      if (stacked) await dest.locator('.card').last().click({ position: { x: 14, y: 6 } });
+      if (stacked)
+        await dest
+          .locator('.card')
+          .last()
+          .click({ position: { x: 14, y: 6 } });
       else await dest.click({ position: { x: 14, y: 6 } });
     } else {
       const key = JSON.stringify(Object.entries(st.p).map(([k, v]) => [k, v.map((c) => c.id)]));
@@ -115,7 +126,10 @@ test('deal 7 can be played all the way to a win', async ({ page }, testInfo) => 
   await expect(page.locator('#curtain')).toBeVisible({ timeout: 60_000 });
 
   for (let i = 0; i < 4; i++) {
-    await expect(page.locator(`[data-pile="f${i}"] .card`), `foundation ${i} is complete`).toHaveCount(13);
+    await expect(
+      page.locator(`[data-pile="f${i}"] .card`),
+      `foundation ${i} is complete`,
+    ).toHaveCount(13);
   }
   await expect(page.locator('[data-pile="waste"] .card')).toHaveCount(0);
   await expect(page.locator('#stat-wins')).toHaveText('1');

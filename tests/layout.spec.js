@@ -49,24 +49,36 @@ test('the longest possible column still clears the controls', async ({ page }) =
   });
 
   expect(room.fan, 'the fan never collapses to nothing').toBeGreaterThan(3);
-  expect(room.worst, 'a nineteen-unit column stays above the controls').toBeLessThanOrEqual(room.rail);
+  expect(room.worst, 'a nineteen-unit column stays above the controls').toBeLessThanOrEqual(
+    room.rail,
+  );
 });
 
 test('cards carry names and face-down cards stay out of the tab order', async ({ page }) => {
   await page.goto(DEAL);
 
-  await expect(page.locator('[data-pile="t6"] .card').last()).toHaveAttribute('aria-label', '2 of spades');
-  await expect(page.locator('[data-pile="t6"] .card').first()).toHaveAttribute('aria-label', 'Face-down card');
+  await expect(page.locator('[data-pile="t6"] .card').last()).toHaveAttribute(
+    'aria-label',
+    '2 of spades',
+  );
+  await expect(page.locator('[data-pile="t6"] .card').first()).toHaveAttribute(
+    'aria-label',
+    'Face-down card',
+  );
 
   // Tabbing through fifty-two cards is reachable and unusable, so the board
   // puts exactly one thing in the tab order and the arrows move it.
-  const inTabOrder = await page.evaluate(() =>
-    [...document.querySelectorAll('#board .card, #board [data-pile]')]
-      .filter((n) => n.tabIndex === 0).length);
+  const inTabOrder = await page.evaluate(
+    () =>
+      [...document.querySelectorAll('#board .card, #board [data-pile]')].filter(
+        (n) => n.tabIndex === 0,
+      ).length,
+  );
   expect(inTabOrder).toBe(1);
 
   const buried = await page.evaluate(() =>
-    [...document.querySelectorAll('.card:not(.is-up)')].every((c) => c.tabIndex === -1));
+    [...document.querySelectorAll('.card:not(.is-up)')].every((c) => c.tabIndex === -1),
+  );
   expect(buried, 'no face-down card is focusable').toBe(true);
 });
 
@@ -110,8 +122,9 @@ test('the skip link reaches the board', async ({ page }) => {
 test('reduced motion turns the animation off', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(DEAL);
-  const duration = await page.evaluate(() =>
-    getComputedStyle(document.querySelector('.card')).transitionDuration);
+  const duration = await page.evaluate(
+    () => getComputedStyle(document.querySelector('.card')).transitionDuration,
+  );
   expect(parseFloat(duration)).toBeLessThan(0.01);
 });
 
@@ -123,7 +136,8 @@ test('every card face renders a rank and a suit', async ({ page }) => {
       idx: c.querySelector('.idx').textContent.trim(),
       art: c.querySelector('.art').textContent.trim(),
       colour: c.dataset.color,
-    })));
+    })),
+  );
 
   expect(faces).toHaveLength(52);
   const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -132,7 +146,7 @@ test('every card face renders a rank and a suit', async ({ page }) => {
     const suit = ['♠', '♥', '♦', '♣'][(f.id / 13) | 0];
     expect(f.idx, `card ${f.id} indexes as ${rank}${suit}`).toBe(`${rank}${suit}︎`);
     expect(f.art, `card ${f.id} has centre art`).not.toBe('');
-    expect(f.colour).toBe((f.id / 13 | 0) === 1 || (f.id / 13 | 0) === 2 ? 'r' : 'b');
+    expect(f.colour).toBe(((f.id / 13) | 0) === 1 || ((f.id / 13) | 0) === 2 ? 'r' : 'b');
   }
 });
 
@@ -158,8 +172,12 @@ test('no face-down card ever shows its face while the hand is dealt', async ({ p
         // backface-visibility and shows the face mirrored. getComputedStyle
         // still reports preserve-3d in that state, so test the causes instead.
         const grouping =
-          cs.opacity !== '1' || cs.filter !== 'none' || cs.mixBlendMode !== 'normal' ||
-          cs.clipPath !== 'none' || cs.maskImage !== 'none' || cs.contain.includes('paint');
+          cs.opacity !== '1' ||
+          cs.filter !== 'none' ||
+          cs.mixBlendMode !== 'normal' ||
+          cs.clipPath !== 'none' ||
+          cs.maskImage !== 'none' ||
+          cs.contain.includes('paint');
         if (grouping) bad.push(`${c.dataset.id} flattened by a grouping property`);
       }
       return bad;
@@ -187,7 +205,9 @@ test('no large card art is sliced by the card fanned over it', async ({ page }) 
       const top = c.getBoundingClientRect().top;
       // Pips are small discrete marks and read as texture when clipped. Rings
       // and letters are single large shapes and must clear the strip whole.
-      for (const a of c.querySelectorAll('.art-ace, .art-court b, .art-court i, .art-big b, .art-big i')) {
+      for (const a of c.querySelectorAll(
+        '.art-ace, .art-court b, .art-court i, .art-big b, .art-big i',
+      )) {
         if (getComputedStyle(a).display === 'none' || !a.getClientRects().length) continue;
         if (a.getBoundingClientRect().top - top < fan) bad.push(c.getAttribute('aria-label'));
       }
@@ -200,7 +220,8 @@ test('no large card art is sliced by the card fanned over it', async ({ page }) 
 test('the index stays readable on a small card', async ({ page }) => {
   await page.goto(DEAL);
   const px = await page.evaluate(() =>
-    parseFloat(getComputedStyle(document.querySelector('.idx')).fontSize));
+    parseFloat(getComputedStyle(document.querySelector('.idx')).fontSize),
+  );
   expect(px, 'rank is legible at any card size').toBeGreaterThanOrEqual(12);
 });
 
@@ -212,7 +233,9 @@ test('the rail survives a narrow phone, Finish it and all', async ({ page }) => 
 
   // Finish it only appears on a solved board, so force it out to measure the
   // widest the rail ever gets.
-  await page.evaluate(() => { document.querySelector('#btn-auto').hidden = false; });
+  await page.evaluate(() => {
+    document.querySelector('#btn-auto').hidden = false;
+  });
 
   const rail = await page.evaluate(() => {
     const bar = document.querySelector('.rail-bottom');
@@ -249,7 +272,9 @@ test('the sheet opens, holds focus, and closes on Esc', async ({ page }) => {
     const box = await page.locator('#sheet').boundingBox();
     expect(box.x, `left edge at ${width}px`).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width, `right edge at ${width}px`).toBeLessThanOrEqual(width + 1);
-    expect(Math.abs((box.x + box.width / 2) - width / 2), `centred at ${width}px`).toBeLessThan(2);
+    expect(Math.abs(box.x + box.width / 2 - width / 2), `centred at ${width}px`).toBeLessThan(
+      2,
+    );
   }
 
   // Tab cycles inside the panel rather than escaping to the board behind it.
@@ -298,14 +323,15 @@ test('the record reports what the player has actually done', async ({ page }) =>
 
 /* --- arrow navigation ---------------------------------------------------- */
 
-const cursor = (page) => page.evaluate(() => {
-  const on = document.activeElement;
-  const host = on && on.closest ? on.closest('[data-pile]') : null;
-  return {
-    pile: host ? host.dataset.pile : null,
-    card: on && on.classList.contains('card') ? on.getAttribute('aria-label') : null,
-  };
-});
+const cursor = (page) =>
+  page.evaluate(() => {
+    const on = document.activeElement;
+    const host = on && on.closest ? on.closest('[data-pile]') : null;
+    return {
+      pile: host ? host.dataset.pile : null,
+      card: on && on.classList.contains('card') ? on.getAttribute('aria-label') : null,
+    };
+  });
 
 test('the arrows reach every pile on the board', async ({ page }) => {
   await page.goto(DEAL);
@@ -368,8 +394,10 @@ test('up walks the fan before it leaves the column', async ({ page }) => {
   expect((await cursor(page)).card).toBe('2 of spades');
 
   await page.keyboard.press('ArrowUp');
-  expect(await cursor(page), 'still in the column, one card deeper')
-    .toEqual({ pile: 't5', card: '3 of diamonds' });
+  expect(await cursor(page), 'still in the column, one card deeper').toEqual({
+    pile: 't5',
+    card: '3 of diamonds',
+  });
 
   await page.keyboard.press('ArrowUp');
   expect((await cursor(page)).pile, 'out of fan, so out of the row').toBe('f3');
@@ -395,11 +423,22 @@ test('only ever one thing on the board is tabbable', async ({ page }) => {
   await page.goto(DEAL);
   await page.locator('#board').focus();
 
-  const count = () => page.evaluate(() =>
-    [...document.querySelectorAll('#board .card, #board [data-pile]')]
-      .filter((n) => n.tabIndex === 0).length);
+  const count = () =>
+    page.evaluate(
+      () =>
+        [...document.querySelectorAll('#board .card, #board [data-pile]')].filter(
+          (n) => n.tabIndex === 0,
+        ).length,
+    );
 
-  for (const key of ['ArrowRight', 'ArrowUp', 'ArrowRight', 'Enter', 'ArrowDown', 'ArrowLeft']) {
+  for (const key of [
+    'ArrowRight',
+    'ArrowUp',
+    'ArrowRight',
+    'Enter',
+    'ArrowDown',
+    'ArrowLeft',
+  ]) {
     await page.keyboard.press(key);
     expect(await count(), `after ${key}`).toBe(1);
   }
@@ -411,18 +450,31 @@ test('moving the cursor never shoves the board about', async ({ page }) => {
 
   // The board is sized to fit, so focus must not try to scroll anything into
   // view — doing so slides the top row up under the header.
-  const drift = () => page.evaluate(() => {
-    const bits = [document.documentElement, document.body,
-                  document.querySelector('.table'), document.querySelector('#board')];
-    return bits.reduce((n, e) => n + e.scrollTop + e.scrollLeft, 0);
-  });
+  const drift = () =>
+    page.evaluate(() => {
+      const bits = [
+        document.documentElement,
+        document.body,
+        document.querySelector('.table'),
+        document.querySelector('#board'),
+      ];
+      return bits.reduce((n, e) => n + e.scrollTop + e.scrollLeft, 0);
+    });
 
-  for (const key of ['ArrowRight', 'ArrowRight', 'ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft']) {
+  for (const key of [
+    'ArrowRight',
+    'ArrowRight',
+    'ArrowUp',
+    'ArrowRight',
+    'ArrowDown',
+    'ArrowLeft',
+  ]) {
     await page.keyboard.press(key);
     expect(await drift(), `after ${key}`).toBe(0);
   }
   const stock = await page.locator('#stock').boundingBox();
   const header = await page.locator('.rail-top').boundingBox();
-  expect(stock.y, 'the stock is still clear of the header')
-    .toBeGreaterThanOrEqual(header.y + header.height - 1);
+  expect(stock.y, 'the stock is still clear of the header').toBeGreaterThanOrEqual(
+    header.y + header.height - 1,
+  );
 });

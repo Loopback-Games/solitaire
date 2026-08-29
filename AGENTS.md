@@ -46,5 +46,5 @@ Pinned by commit SHA with the version in a trailing comment. Resolve a SHA with
 ## Before you push
 
 `just ci`. Read the Playwright result off a grep of the summary line, never off
-`tail`: the trailing list of test names is the *failure* list, and it reads as a
+`tail`: the trailing list of test names is the _failure_ list, and it reads as a
 pass list once the glyphs are truncated.
