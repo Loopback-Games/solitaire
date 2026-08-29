@@ -18,11 +18,6 @@ export PATH := env("HOME") / ".local/share/mise/shims" + ":" + env("PATH")
 # how it gets built and checked, and has no business on a public web server.
 site := "index.html sw.js manifest.webmanifest .nojekyll LICENSE css js assets"
 
-# There is no `fmt` recipe on purpose. The only formatter that would apply here
-# is prettier, and reaching for `npx --yes prettier@3` would put an unpinned
-# tool back in a repository whose whole tooling story is that versions are
-# pinned in one file.
-
 # List the available recipes.
 default:
     @just --list
@@ -42,8 +37,18 @@ setup:
         echo "browsers already in the image at ${PLAYWRIGHT_BROWSERS_PATH}"
     fi
 
+# Prettier was refused here for a long time, on the grounds that reaching for
+# `npx --yes prettier@3` would put an unpinned tool back in a repository whose
+# whole story is that versions live in one file. That objection no longer holds:
+# it is a pinned devDependency in the lockfile, like everything else.
+
+# Format every file in place.
+fmt:
+    prettier --write .
+
 # Static analysis of everything. Changes nothing, and fails rather than skips.
 lint: lint-js lint-config lint-versions
+    prettier --check .
 
 # Note the `--input-type=module` below: a bare `node --check` silently accepts
 # a file containing ESM syntax, so the obvious form of this recipe checks
