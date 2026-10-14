@@ -9,7 +9,7 @@
 # Pinned by digest. The tag must match the @playwright/test version in
 # package.json or Playwright cannot find its browsers at all; `just
 # lint-versions` fails the build if they drift apart.
-FROM mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
+FROM mcr.microsoft.com/playwright:v1.64.1-noble@sha256:7852dc5a7d72f5fe458a597d690f6c42fbc8e9e26ddfa95f8e6ef552558d9bbf
 
 # mise from its own signed apt repository, which is what extrepo would enable
 # if extrepo carried a policy for Ubuntu — it only has Debian suites — and a
